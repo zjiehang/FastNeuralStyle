@@ -3,11 +3,13 @@ from vgg.vgg19 import Vgg19
 VGG_MEAN = [103.939, 116.779, 123.68]
 
 
-class Vgg19(Vgg19):
+class CustomVgg19(Vgg19):
 
     # Input should be an rgb image [batch, height, width, 3]
     # values scaled [0, 1]
-    def build(self, rgb, train=False):
+    def __init__(self,  rgb,vgg19_npy_path=None, train=False):
+        Vgg19.__init__(self, vgg19_npy_path)
+
         print("building vgg19....")
 
         self.conv1_1 = self.conv_layer(rgb, "conv1_1")

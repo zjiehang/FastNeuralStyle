@@ -2,6 +2,7 @@
 import scipy.misc
 import random
 import numpy as np
+import tensorflow as tf
 
 def resize_to(img, resize=512):
     '''Resize short side to target size and preserve aspect ratio'''
@@ -18,15 +19,15 @@ def resize_to(img, resize=512):
     return scipy.misc.imresize(img, resize_shape)
 
 
-def get_img_random_crop(img, resize=512, crop=256,is_norm=True):
+def get_img_random_crop(img, resize=512, crop=256,is_random=True):
     '''Getresize image and random crop'''
     img = resize_to(img, resize=resize)
 
-    if is_norm:
-        offset_h = random.randint(0, (img.shape[0]-crop)-1)
-        offset_w = random.randint(0, (img.shape[1]-crop)-1)
+    if is_random:
+        offset_h = random.randint(0, (img.shape[0]-crop-1))
+        offset_w = random.randint(0, (img.shape[1]-crop-1))
 
-        img = img[offset_h:offset_h+crop, offset_w:offset_w+crop, :]
+        img = img[offset_h:offset_h+crop, offset_w:offset_w+crop,:]
     else:
         h_offset = int(np.floor((img.shape[0] - crop) / 2.))
         w_offset = int(np.floor((img.shape[1] - crop) / 2.))
@@ -49,3 +50,32 @@ def get_vgg19_decoder_layers_detail(content_encoder_layer):
         layers_detail.append(vgg19_layers[i])
     layers_detail.append(last_layer_number)
     return layers_detail
+
+
+def mean_squared(x,y):
+    return tf.reduce_mean(tf.square( x - y ))
+
+def gram_matrix(feature_maps):
+    """Computes the Gram matrix for a set of feature maps.
+       Borrowed from https://github.com/tensorflow/magenta/blob/9eb2e71074c09f55dba10cc493d26aef3168cdcb/magenta/models/image_stylization/learning.py
+    """
+    batch_size, height, width, channels = tf.unstack(tf.shape(feature_maps))
+    denominator = tf.to_float(height * width)
+    feature_maps = tf.reshape(
+      feature_maps, tf.stack([batch_size, height * width, channels]))
+    matrix = tf.matmul(feature_maps, feature_maps, adjoint_a=True)
+    return matrix / denominator
+
+
+def learning_rate_decay(learning_rate, global_step, decay_rate, name=None):
+    '''Adapted from https://github.com/torch/optim/blob/master/adam.lua'''
+    if global_step is None:
+        raise ValueError("global_step is required for exponential_decay.")
+    with tf.name_scope(name, "ExponentialDecay", [learning_rate, global_step, decay_rate]) as name:
+        learning_rate = tf.convert_to_tensor(learning_rate, name="learning_rate")
+        dtype = learning_rate.dtype
+        global_step = tf.cast(global_step, dtype)
+        decay_rate = tf.cast(decay_rate, dtype)
+
+        # local clr = lr / (1 + state.t*lrd)
+        return learning_rate / (1 + global_step*decay_rate)

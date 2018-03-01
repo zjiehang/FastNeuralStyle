@@ -3,6 +3,7 @@ from tqdm import tqdm
 from abc import ABCMeta,abstractmethod
 import os
 import shutil
+import time
 
 
 """
@@ -30,10 +31,10 @@ class Model(object, metaclass=ABCMeta):
     """
     Save the current state of the network to file
     """
-    def save(self, savedir='saved_models'):
+    def save(self, savedir='saved_models',global_step = 0):
         print("Saving...")
         # tl.files.save_npz(self.all_params, name=savedir + '/model.npz', sess=self.sess)
-        self.saver.save(self.sess,savedir+"/model")
+        self.saver.save(self.sess,savedir+"/model",global_step)
         print("Saved!")
 
     """
@@ -62,9 +63,7 @@ class Model(object, metaclass=ABCMeta):
     """
     Train the neural network
     """
-    def train(self,batch_size= 10, iterations=1000,save_dir="saved_models",reuse=False,reuse_dir=None,log_dir="log"):
-        if reuse:
-            self.resume(reuse_dir)
+    def train(self,batch_size= 10, iterations=1000,save_dir="saved_models",reuse=False,reuse_dir=None,log_dir="log",summary_iter=100,save_iter=1000):
 
         #create the save directory if not exist
         if os.path.exists(save_dir):
@@ -80,50 +79,40 @@ class Model(object, metaclass=ABCMeta):
         with self.sess as sess:
             #Initialize all variables
             sess.run(init)
-
+            if reuse:
+                self.resume(reuse_dir)
             #create summary writer for train
-            train_writer = tf.summary.FileWriter(log_dir+"/train",sess.graph)
-
-            #If we're using a test set, include another summary writer for that
-            test_writer = tf.summary.FileWriter(log_dir+"/test",sess.graph)
-            test_feed = []
-            while True:
-                test_x,test_y = self.data.get_test_set(batch_size)
-                if test_x!=None and test_y!=None:
-                    test_feed.append({
-                            self.input:test_x,
-                            self.target:test_y
-                    })
-                else:
-                    break
+            writer = tf.summary.FileWriter(log_dir,sess.graph)
 
             #This is our training loop
             for i in tqdm(range(iterations)):
-                #Use the data function we were passed to get a batch every iteration
-                x,y = self.data.get_batch(batch_size)
-                #Create feed dictionary for the batch
-                feed = {
-                    self.input:x,
-                    self.target:y
+                start = time.time()
+                content,style = self.data.get_batch(batch_size)
+                feed_dict = {
+                    self.content_input:content,
+                    self.style_input:style
                 }
-                #Run the train op and calculate the train summary
-                summary,_ = sess.run([self.train_merge,self.train_op],feed)
-                #Write train summary for this step
-                if i%10 == 0:
-                    train_writer.add_summary(summary,i)
-                #test every 10 iterations
-                if i%100 == 0:
-                    sess.run(tf.local_variables_initializer())
-                    for j in range(len(test_feed)):
-                        sess.run([self.streaming_loss_update,self.streaming_psnr_update],feed_dict=test_feed[j])
-                    streaming_summ = sess.run(self.test_merge)
-                    #Write test summary
-                    test_writer.add_summary(streaming_summ,i)
+                fetches = {
+                    'train': self.train_op,
+                    'global_step': self.global_step,
+                    'summary': self.summary_op,
+                    'lr': self.learning_rate,
+                    'all_loss': self.all_loss
+                }
+                result = sess.run(fetches, feed_dict=feed_dict)
 
-                # Save our trained model
-                if i!=0 and i % 500 == 0:
-                    self.save(save_dir)
+                ### Log the summaries
+                if i % summary_iter == 0:
+                    writer.add_summary(result['summary'], result['global_step'])
 
-            self.save(save_dir)
-            test_writer.close()
-            train_writer.close()
+                ### Save checkpoint
+                if i % save_iter == 0:
+                    self.save(save_dir,result['global_step'])
+
+                ### Debug
+                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Time: {:.5f}".format(
+                    result['global_step'], result['lr'], result['all_loss'], time.time() - start))
+
+                # Last save
+            self.save(save_dir, result['global_step'])
+            writer.close()
