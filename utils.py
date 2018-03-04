@@ -4,8 +4,9 @@ import random
 import numpy as np
 import tensorflow as tf
 
+'''
 def resize_to(img, resize=512):
-    '''Resize short side to target size and preserve aspect ratio'''
+    #Resize short side to target size and preserve aspect ratio
     height, width = img.shape[0], img.shape[1]
     if height < width:
         ratio = height / resize
@@ -20,7 +21,7 @@ def resize_to(img, resize=512):
 
 
 def get_img_random_crop(img, resize=512, crop=256,is_random=True):
-    '''Getresize image and random crop'''
+    #Getresize image and random crop
     img = resize_to(img, resize=resize)
 
     if is_random:
@@ -36,7 +37,7 @@ def get_img_random_crop(img, resize=512, crop=256,is_random=True):
         img = img[h_offset: h_end, w_offset: w_end,:]
 
     return img
-
+'''
 
 def get_vgg19_decoder_layers_detail(content_encoder_layer):
     vgg19_layers = [2,2,4,4,4]
