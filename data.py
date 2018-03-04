@@ -54,9 +54,9 @@ class Data(object):
         images_after_crop = []
 
         for i in range(len(images_before_crop)):
-            if len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] == 4:
+            if len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] != 3:
                 images_before_crop[i] = scipy.misc.imread(os.path.join(path,image_list[i]),mode='RGB')
-            if not (len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] == 3):
+            if len(images_before_crop[i].shape) == 2 or images_before_crop[i].shape[2] == 1:
                 images_before_crop[i] = np.dstack((images_before_crop[i],images_before_crop[i],images_before_crop[i]))
 
             image = tl.prepro.imresize(images_before_crop[i],size = [self.img_size*2,self.img_size*2])
