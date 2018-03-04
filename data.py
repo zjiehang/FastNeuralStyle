@@ -34,12 +34,12 @@ class Data(object):
     def get_batch(self,batch_size = 8):
         # get content list
         content_batch_list = np.random.choice(self.content_images,size=batch_size)
-        print(content_batch_list)
+        #print(content_batch_list)
         content_batch = self.__get_image_list(self.content_dir,content_batch_list)
 
         # get style list
         style_batch_list = np.random.choice(self.style_images,size=batch_size)
-        print(style_batch_list)
+        # print(style_batch_list)
         style_batch = self.__get_image_list(self.style_dir,style_batch_list)
         return content_batch,style_batch
 
