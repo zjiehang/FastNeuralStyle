@@ -79,3 +79,6 @@ def learning_rate_decay(learning_rate, global_step, decay_rate, name=None):
 
         # local clr = lr / (1 + state.t*lrd)
         return learning_rate / (1 + global_step*decay_rate)
+
+def normalize_color(img):
+    return tf.div(img,tf.constant(255.0,dtype=tf.float32))
