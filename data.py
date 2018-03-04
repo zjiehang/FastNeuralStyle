@@ -3,6 +3,7 @@ import tensorlayer as tl
 import os
 import numpy as np
 import utils
+import scipy.misc
 
 class Data(object):
     '''
@@ -53,10 +54,13 @@ class Data(object):
         images_after_crop = []
 
         for i in range(len(images_before_crop)):
+            if len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] == 4:
+                images_before_crop[i] = scipy.misc.imread(os.path.join(path,image_list[i]),mode='RGB')
             if not (len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] == 3):
                 images_before_crop[i] = np.dstack((images_before_crop[i],images_before_crop[i],images_before_crop[i]))
-            print(images_before_crop[i].shape)
-            image = utils.get_img_random_crop(images_before_crop[i], resize=self.img_size*2, crop=self.img_size)
+
+            image = tl.prepro.imresize(images_before_crop[i],size = [self.img_size*2,self.img_size*2])
+            image = tl.prepro.crop(image,self.img_size,self.img_size,is_random=True)
             images_after_crop.append(image)
 
         return images_after_crop
