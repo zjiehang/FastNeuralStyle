@@ -67,7 +67,7 @@ class Data(object):
         '''
         images = []
         for i in range(len(image_list)):
-            image = scipy.misc.imread(os.path.join(path,image_list),mode='RGB')
+            image = scipy.misc.imread(os.path.join(path,image_list[i]),mode='RGB')
             image = tl.prepro.imresize(image, size=[self.img_size * 2, self.img_size * 2])
             image = tl.prepro.crop(image, self.img_size, self.img_size, is_random=True)
             images.append(image)
