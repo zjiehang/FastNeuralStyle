@@ -18,7 +18,7 @@ def resize_to(img, resize_shape=512):
         long_side = round(height / ratio)
         resize_shape = (long_side, resize_shape, 3)
 
-    return resize(img, resize_shape,anti_aliasing=True)
+    return resize(img, resize_shape)
 '''
 def get_img_random_crop(img, resize=512, crop=256,is_random=True):
     #Getresize image and random crop
