@@ -3,22 +3,22 @@ import scipy.misc
 import random
 import numpy as np
 import tensorflow as tf
+from skimage.transform import resize
 
 
-def resize_to(img, resize=512):
+def resize_to(img, resize_shape=512):
     #Resize short side to target size and preserve aspect ratio
     height, width = img.shape[0], img.shape[1]
     if height < width:
-        ratio = height / resize
+        ratio = height / resize_shape
         long_side = round(width / ratio)
-        resize_shape = (resize, long_side, 3)
+        resize_shape = (resize_shape, long_side, 3)
     else:
-        ratio = width / resize
+        ratio = width / resize_shape
         long_side = round(height / ratio)
-        resize_shape = (long_side, resize, 3)
+        resize_shape = (long_side, resize_shape, 3)
 
-    return scipy.misc.imresize(img, resize_shape)
-
+    return resize(img, resize_shape,anti_aliasing=True)
 '''
 def get_img_random_crop(img, resize=512, crop=256,is_random=True):
     #Getresize image and random crop
