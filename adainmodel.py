@@ -41,7 +41,7 @@ class AdaInModel(Model):
 
     def buildModel(self,isTrain=True):
         with tf.variable_scope('encoder'):
-            encoder_input = tf.concat([self.content_input_norm,self.style_input_norm],0)
+            encoder_input = tf.concat([self.content_input,self.style_input],0)
             self.vgg_encode_input = CustomVgg19(encoder_input,self.pretrained_vgg_path)
             encoder_output_content_loss_layer = getattr(self.vgg_encode_input,self.content_loss_layer)
             encoder_content_output,encoder_style_output = tf.split(encoder_output_content_loss_layer,2,0)
@@ -127,8 +127,8 @@ class AdaInModel(Model):
             tf.summary.scalar('tv-loss',self.tv_loss)
             tf.summary.scalar('all-loss',self.all_loss)
 
-            tf.summary.image('content-image',tf.clip_by_value(self.content_input_norm,0,1))
-            tf.summary.image('style-image',tf.clip_by_value(self.style_input_norm,0,1))
+            tf.summary.image('content-image',tf.clip_by_value(self.content_input,0,1))
+            tf.summary.image('style-image',tf.clip_by_value(self.style_input,0,1))
             tf.summary.image('stylied-image',tf.clip_by_value(self.outputs,0,1))
 
         self.summary_op = tf.summary.merge_all()
