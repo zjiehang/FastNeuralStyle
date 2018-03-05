@@ -4,7 +4,7 @@ import random
 import numpy as np
 import tensorflow as tf
 
-'''
+
 def resize_to(img, resize=512):
     #Resize short side to target size and preserve aspect ratio
     height, width = img.shape[0], img.shape[1]
@@ -19,7 +19,7 @@ def resize_to(img, resize=512):
 
     return scipy.misc.imresize(img, resize_shape)
 
-
+'''
 def get_img_random_crop(img, resize=512, crop=256,is_random=True):
     #Getresize image and random crop
     img = resize_to(img, resize=resize)
