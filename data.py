@@ -49,7 +49,7 @@ class Data(object):
     :param image_list: the list of images name to get 
     '''
     def __get_image_list(self,path,image_list):
-
+        '''
         images_before_crop = tl.visualize.read_images(image_list,path)
         images_after_crop = []
 
@@ -64,4 +64,12 @@ class Data(object):
             images_after_crop.append(image)
 
         return images_after_crop
+        '''
+        images = []
+        for i in range(len(image_list)):
+            image = scipy.misc.imread(os.path.join(path,image_list),mode='RGB')
+            image = tl.prepro.imresize(image, size=[self.img_size * 2, self.img_size * 2])
+            image = tl.prepro.crop(image, self.img_size, self.img_size, is_random=True)
+            images.append(image)
 
+        return images
