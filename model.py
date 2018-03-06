@@ -25,8 +25,8 @@ class Model(object, metaclass=ABCMeta):
         self.style_input = tf.placeholder(tf.float32, [None, None, None, self.channels], name='style-input')
 
         # using skimage.transform can change [0,255] to [0,1]
-        #self.content_input_norm = utils.normalize_color(self.content_input)
-        #self.style_input_norm = utils.normalize_color(self.style_input)
+        self.content_input_norm = utils.normalize_color(self.content_input)
+        self.style_input_norm = utils.normalize_color(self.style_input)
 
     @abstractmethod
     def buildModel(self):
