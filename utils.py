@@ -8,7 +8,10 @@ import scipy.misc
 
 def resize_to(img, resize_shape=512):
     #Resize short side to target size and preserve aspect ratio
-    height, width = img.shape[0], img.shape[1]
+    if img.size == 1:
+        height, width = img.item(0).size
+    else:
+        height, width = img.shape[0], img.shape[1]
     if height < width:
         ratio = height / resize_shape
         long_side = round(width / ratio)
