@@ -1,9 +1,9 @@
 # coding : utf-8
-import tensorlayer as tl
 import os
 import numpy as np
 import utils
 import scipy.misc
+import tensorlayer as tl
 
 class Data(object):
     '''
