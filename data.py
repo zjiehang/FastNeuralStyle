@@ -59,4 +59,3 @@ class Data(object):
             images_after_crop.append(image)
 
         return images_after_crop
-        return images
