@@ -10,22 +10,29 @@ def resize_to(img, resize_shape=512):
     #Resize short side to target size and preserve aspect ratio
     if img.size == 1:
         height, width = img.item(0).size
+        if height < width:
+            ratio = height / resize_shape
+            long_side = round(width / ratio)
+            resize_shape = (resize_shape, long_side)
+        else:
+            ratio = width / resize_shape
+            long_side = round(height / ratio)
+            resize_shape = (long_side, resize_shape)
+
+        img_object = img.item(0)
+        img_after_resize = img_object.resize(resize_shape)
+        return np.array(img_after_resize)
+
     else:
         height, width = img.shape[0], img.shape[1]
-    if height < width:
-        ratio = height / resize_shape
-        long_side = round(width / ratio)
-        resize_shape = (resize_shape, long_side, 3)
-    else:
-        ratio = width / resize_shape
-        long_side = round(height / ratio)
-        resize_shape = (long_side, resize_shape, 3)
-
-    if img.size == 1:
-        img_object = img.item(0)
-        img_after_resize = img_object.resize([512,512])
-        return np.array(img_after_resize)
-    else:
+        if height < width:
+            ratio = height / resize_shape
+            long_side = round(width / ratio)
+            resize_shape = (resize_shape, long_side, 3)
+        else:
+            ratio = width / resize_shape
+            long_side = round(height / ratio)
+            resize_shape = (long_side, resize_shape, 3)
         return scipy.misc.resize(img, resize_shape)
 '''
 def get_img_random_crop(img, resize=512, crop=256,is_random=True):
