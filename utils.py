@@ -33,7 +33,7 @@ def resize_to(img, resize_shape=512):
             ratio = width / resize_shape
             long_side = round(height / ratio)
             resize_shape = (long_side, resize_shape, 3)
-        return scipy.misc.resize(img, resize_shape)
+        return scipy.misc.imresize(img, resize_shape)
 '''
 def get_img_random_crop(img, resize=512, crop=256,is_random=True):
     #Getresize image and random crop
