@@ -49,30 +49,14 @@ class Data(object):
     :param image_list: the list of images name to get 
     '''
     def __get_image_list(self,path,image_list):
-        '''
         images_before_crop = tl.visualize.read_images(image_list,path)
         images_after_crop = []
 
         for i in range(len(images_before_crop)):
-            if len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] != 3:
-                images_before_crop[i] = scipy.misc.imread(os.path.join(path,image_list[i]),mode='RGB')
-            if not (len(images_before_crop[i].shape) == 3 and images_before_crop[i].shape[2] == 3):
-                images_before_crop[i] = np.dstack((images_before_crop[i],images_before_crop[i],images_before_crop[i]))
 
-            image = tl.prepro.imresize(images_before_crop[i],size = [self.img_size*2,self.img_size*2])
+            image = utils.resize_to(images_before_crop[i],resize_shape=self.img_size*2)
             image = tl.prepro.crop(image,self.img_size,self.img_size,is_random=True)
             images_after_crop.append(image)
 
         return images_after_crop
-        '''
-        images = []
-        for i in range(len(image_list)):
-            image = scipy.misc.imread(os.path.join(path,image_list[i]),mode='RGB')
-            if not (len(image.shape) == 3 and image.shape[2] == 3):
-                image = np.dstack((image, image, image))
-
-            image = tl.prepro.imresize(image,[self.img_size * 2,self.img_size*2])
-            image = tl.prepro.crop(image, self.img_size, self.img_size, is_random=True)
-            images.append(image)
-
         return images
