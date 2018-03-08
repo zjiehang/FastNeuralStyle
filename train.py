@@ -7,7 +7,9 @@ import argparse
 import os
 from data import Data
 from adainmodel import AdaInModel
+from PIL import Image
 
+Image.MAX_IMAGE_PIXELS = None
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None
 
