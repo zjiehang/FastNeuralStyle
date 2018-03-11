@@ -1,7 +1,8 @@
 import utils
+import numpy as np
 
-list = utils.get_vgg19_decoder_layers_detail('conv4_1')
-number = len(list)
-for i in range(number, 0, -1):
-    for j in range(list[i - 1], 0, -1):
-        print('deconv%d_%d'%(i,j))
+a = np.random.rand(5,5)
+
+if len(a.shape) == 2 or a.shape[2] == 1:
+    d = np.dstack((a,a,a))
+print(d.shape)
