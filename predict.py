@@ -4,7 +4,7 @@ from __future__ import division
 import sys
 import tensorflow as tf
 import tensorlayer as tl
-import scipy.misc
+import numpy as np
 import argparse
 import os
 import time
@@ -53,8 +53,9 @@ def main(_):
             content_name, content_post = os.path.splitext(content)
             style_name, style_post = os.path.splitext(style)
             output = network.predict([content_array],[style_array])
-            tl.vis.save_image(output[0],FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post)
-            print('Successfully saved %s in %8s s'%((FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post),time.time()-each_time))
+            output = np.clip(output[0],0.0,1.0)
+            tl.vis.save_image(output,FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post)
+            print('Successfully saved %s in %.5f s'%((FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post),float(time.time()-each_time)))
 
     print('Successfully process %d pictures!' % (result_numbers))
     print("Avg Time: %.5f /pic"%(float(time.time()-start_time)/result_numbers))
