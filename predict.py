@@ -16,17 +16,20 @@ FLAGS = None
 def get_all_batch_from_path(path):
     assert os.path.exists(path),"The path must exists!"
     if os.path.isdir(path):
-        files = os.listdir(path)
-        return [os.path.join(path,file) for file in files]
+        return path,os.listdir(path)
     else:
-        return [path]
+        path_split = path.split('/')
+        true_path = ''
+        for i in range(len(path_split)-1):
+            true_path = true_path + path_split[i] + '/'
+        return true_path,[path_split[len(path_split)-1]]
 
 def main(_):
     if not os.path.exists(FLAGS.outdir):
         os.mkdir(FLAGS.outdir)
 
-    content_batch = get_all_batch_from_path(FLAGS.contentpath)
-    style_batch = get_all_batch_from_path(FLAGS.stylepath)
+    content_path,content_batch = get_all_batch_from_path(FLAGS.contentpath)
+    style_path,style_batch = get_all_batch_from_path(FLAGS.stylepath)
 
     network = AdaInModel(FLAGS.pretrainedpath,
                          FLAGS.adainoutputproportion,
@@ -43,8 +46,10 @@ def main(_):
     for content in content_batch:
         for style in style_batch:
             each_time = time.time()
-            content_array = scipy.misc.imread(content)
-            style_array = scipy.misc.imread(style)
+            content_array = tl.visualize.read_image(content,content_path)
+            content_array = tl.prepro.imresize(content_array,[512,512])
+            style_array = tl.visualize.read_image(style,style_path)
+            style_array = tl.visualize.read_image(style_array,[512,512])
             content_name, content_post = os.path.splitext(content)
             style_name, style_post = os.path.splitext(style)
             output = network.predict([content_array],[style_array])
