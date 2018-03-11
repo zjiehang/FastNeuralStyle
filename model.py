@@ -61,8 +61,8 @@ class Model(object, metaclass=ABCMeta):
     Estimate the trained model
     x: (tf.float32, [batch_size, h, w, output_channels])
     """
-    def predict(self, x):
-        return self.sess.run(self.output, feed_dict={self.input: x})
+    def predict(self, content,style):
+        return self.sess.run(self.outputs, feed_dict={self.content_input:content,self.style_input:style})
 
     """
     Train the neural network
