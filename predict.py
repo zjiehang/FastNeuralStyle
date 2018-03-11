@@ -30,8 +30,7 @@ def main(_):
 
     network = AdaInModel(FLAGS.pretrainedpath,
                          FLAGS.adainoutputproportion,
-                         FLAGS.contentlosslayer,
-                         FLAGS.stylelosslayers)
+                         FLAGS.contentlosslayer)
     network.buildModel(isTrain=False)
 
     print('There are %d content pictures !'%(len(content_batch)))
