@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     #parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
     parser.add_argument("--adainoutputproportion",default=1.0,type=float)
-    parser.add_argument("--outdir",default='logfile/adain_50000',type=str)
+    parser.add_argument("--outdir",default='output',type=str)
     parser.add_argument("--reusedir", default='ckpt/adain_50000', type=str)
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
