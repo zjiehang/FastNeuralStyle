@@ -16,7 +16,7 @@ FLAGS = None
 def get_all_batch_from_path(path):
     assert os.path.exists(path),"The path must exists!"
     if os.path.isdir(path):
-        files = os.path.join(path)
+        files = os.listdir(path)
         return [os.path.join(path,file) for file in files]
     else:
         return [path]
