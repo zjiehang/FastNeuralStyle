@@ -32,6 +32,7 @@ def main(_):
                          FLAGS.adainoutputproportion,
                          FLAGS.contentlosslayer)
     network.buildModel(isTrain=False)
+    network.resume(FLAGS.reusedir)
 
     print('There are %d content pictures !'%(len(content_batch)))
     print('Thers are %d style pictures !'%(len(style_batch)))
@@ -41,12 +42,14 @@ def main(_):
 
     for content in content_batch:
         for style in style_batch:
+            each_time = time.time()
             content_array = scipy.misc.imread(content)
             style_array = scipy.misc.imread(style)
             content_name, content_post = os.path.splitext(content)
             style_name, style_post = os.path.splitext(style)
             output = network.predict([content_array],[style_array])
             tl.vis.save_image(output[0],FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post)
+            print('Successfully saved %s in %8s s'%((FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post),time.time()-each_time))
 
     print('Successfully process %d pictures!' % (result_numbers))
     print("Avg Time: %.5f /pic"%(float(time.time()-start_time)/result_numbers))
@@ -54,8 +57,8 @@ def main(_):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--contentpath",default="images/content",type=str)
-    parser.add_argument("--stylepath",default="images/style",type=str)
+    parser.add_argument("--contentpath",default="input/content",type=str)
+    parser.add_argument("--stylepath",default="input/style",type=str)
     parser.add_argument("--pretrainedpath",default="pretrained/vgg19.npy",type=str)
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     #parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
