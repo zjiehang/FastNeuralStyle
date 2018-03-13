@@ -5,7 +5,6 @@ import numpy as np
 import tensorflow as tf
 import scipy.misc
 
-
 def resize_to(img, resize_shape=512):
     #Resize short side to target size and preserve aspect ratio
     if img.size == 1:
@@ -68,8 +67,20 @@ def get_vgg19_decoder_layers_detail(content_encoder_layer):
     return layers_detail
 
 
+def get_channel_number_from_vgg19_layer(layer):
+    vgg = {'conv1':64,
+           'conv2':128,
+           'conv3':256,
+           'conv4':512,
+           'conv5':512}
+    for key in vgg:
+        if layer.startswith(key):
+            return vgg[key]
+
+
 def mean_squared(x,y):
     return tf.reduce_mean(tf.square( x - y ))
+
 
 def gram_matrix(feature_maps):
     """Computes the Gram matrix for a set of feature maps.

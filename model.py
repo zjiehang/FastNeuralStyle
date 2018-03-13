@@ -17,17 +17,6 @@ super-resolution of images as described in:
 (single scale baseline-style model)
 """
 class Model(object, metaclass=ABCMeta):
-    def __init__(self,channels=3):
-        self.channels = channels
-        #Placeholder for image inputs
-        self.content_input = tf.placeholder(tf.float32, [None, None, None, self.channels], name='content-input')
-        #Placeholder for upscaled image ground-truth
-        self.style_input = tf.placeholder(tf.float32, [None, None, None, self.channels], name='style-input')
-
-        # using skimage.transform can change [0,255] to [0,1]
-        self.content_input_norm = utils.normalize_color(self.content_input)
-        self.style_input_norm = utils.normalize_color(self.style_input)
-
     @abstractmethod
     def buildModel(self):
         pass
@@ -92,10 +81,33 @@ class Model(object, metaclass=ABCMeta):
             for i in tqdm(range(iterations)):
                 start = time.time()
                 content,style = self.data.get_batch(batch_size)
-                feed_dict = {
-                    self.content_input:content,
-                    self.style_input:style
-                }
+
+                # step 1
+                # encode content and style images
+                # input : content / style images
+                # output : the vgg19 encoded version of content / style image
+
+                content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.encoder_input:content})
+                style_batch_encoded,style_target_value = self.sess.run([self.encoder_content_output,self.encoder_style_output]
+                                                                  ,feed_dict={self.encoder_input:content})
+
+                # step 2
+                # run the adain-layer
+                # input : the vgg19 encoded version of content and style image
+                # output : the output of adain-layer
+                adain_layer_output = self.sess.run(self.adain_layer_output,feed_dict={
+                    self.adain_content_input:content_batch_encoded,
+                    self.adain_style_input:style_batch_encoded
+                })
+
+                # step 3
+                # run the decoder layer
+                # input : the output of adain-layer
+                # output : the final output
+                result = self.sess.run(self.decoder_output,feed_dict={self.decoder_input:adain_layer_output})
+
+                # step 4
+                # calculate the loss and run the train operation
                 fetches = {
                     'train': self.train_op,
                     'global_step': self.global_step,
@@ -106,6 +118,13 @@ class Model(object, metaclass=ABCMeta):
                     'style_loss': self.style_loss,
                     'tv_loss': self.tv_loss,
                 }
+                feed_dict = {
+                    self.encoder_input:result,
+                    self.content_target:content_batch_encoded
+                }
+                for layer in self.style_loss_layers_list:
+                    feed_dict[self.style_target[layer]] = style_target_value[layer]
+
                 result = sess.run(fetches, feed_dict=feed_dict)
 
                 ### Log the summaries

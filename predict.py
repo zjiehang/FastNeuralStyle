@@ -9,7 +9,6 @@ import argparse
 import os
 import time
 from adainmodel import AdaInModel
-from PIL import Image
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None
@@ -53,7 +52,6 @@ def main(_):
             content_name, content_post = os.path.splitext(content)
             style_name, style_post = os.path.splitext(style)
             output = network.predict([content_array],[style_array])
-            output = np.clip(output[0],0.0,1.0)
             tl.vis.save_image(output,FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post)
             print('Successfully saved %s in %.5f s'%((FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post),float(time.time()-each_time)))
 

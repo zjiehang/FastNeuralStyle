@@ -7,9 +7,7 @@ import argparse
 import os
 from data import Data
 from adainmodel import AdaInModel
-from PIL import Image
 
-Image.MAX_IMAGE_PIXELS = None
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None
 
@@ -43,7 +41,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--contentpath",default="images/content",type=str)
     parser.add_argument("--stylepath",default="images/style",type=str)
-    parser.add_argument("--pretrainedpath",default="pretrained/vgg19.npy",type=str)
+    parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
     parser.add_argument("--contentlossweight",default=1.0,type=float)
