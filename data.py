@@ -55,6 +55,7 @@ class Data(object):
             image = scipy.misc.imread(os.path.join(path,image_list[i]),mode='RGB')
             image = utils.resize_to(image,resize_shape=self.img_size*2)
             image = tl.prepro.crop(image,self.img_size,self.img_size,is_random=True)
+            image = image.astype(np.float32) / 255.0
             images.append(image)
 
         return images
