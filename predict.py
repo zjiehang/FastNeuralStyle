@@ -61,11 +61,11 @@ if __name__ == '__main__':
 
     parser.add_argument("--contentpath",default="input/content",type=str)
     parser.add_argument("--stylepath",default="input/style",type=str)
-    parser.add_argument("--pretrainedpath",default="pretrained/vgg19.npy",type=str)
+    parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     #parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
     parser.add_argument("--adainoutputproportion",default=1.0,type=float)
     parser.add_argument("--outdir",default='output',type=str)
-    parser.add_argument("--reusedir", default='ckpt/adain_50000', type=str)
+    parser.add_argument("--reusedir", default='ckpt/adain_10000', type=str)
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
