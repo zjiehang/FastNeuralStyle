@@ -18,7 +18,7 @@ super-resolution of images as described in:
 """
 class Model(object, metaclass=ABCMeta):
     @abstractmethod
-    def buildModel(self):
+    def buildTrainModel(self):
         pass
 
     """
@@ -87,26 +87,11 @@ class Model(object, metaclass=ABCMeta):
                 # input : content / style images
                 # output : the vgg19 encoded version of content / style image
 
-                content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.encoder_input:content})
+                content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:content})
                 style_batch_encoded,style_target_value = self.sess.run([self.encoder_content_output,self.encoder_style_output]
-                                                                  ,feed_dict={self.encoder_input:content})
+                                                                  ,feed_dict={self.images:style})
 
                 # step 2
-                # run the adain-layer
-                # input : the vgg19 encoded version of content and style image
-                # output : the output of adain-layer
-                adain_layer_output = self.sess.run(self.adain_layer_output,feed_dict={
-                    self.adain_content_input:content_batch_encoded,
-                    self.adain_style_input:style_batch_encoded
-                })
-
-                # step 3
-                # run the decoder layer
-                # input : the output of adain-layer
-                # output : the final output
-                result = self.sess.run(self.decoder_output,feed_dict={self.decoder_input:adain_layer_output})
-
-                # step 4
                 # calculate the loss and run the train operation
                 fetches = {
                     'train': self.train_op,
@@ -119,7 +104,8 @@ class Model(object, metaclass=ABCMeta):
                     'tv_loss': self.tv_loss,
                 }
                 feed_dict = {
-                    self.encoder_input:result,
+                    self.adain_content_input:content_batch_encoded,
+                    self.adain_style_input:style_batch_encoded,
                     self.content_target:content_batch_encoded
                 }
                 for layer in self.style_loss_layers_list:

@@ -25,7 +25,7 @@ def main(_):
                          FLAGS.batchsize,
                          FLAGS.learningrate,
                          FLAGS.learningratedecay)
-    network.buildModel(isTrain=True)
+    network.buildTrainModel()
     network.set_data(data)
     network.train(FLAGS.batchsize,
                   FLAGS.iterators,

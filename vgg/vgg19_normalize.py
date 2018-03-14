@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+import utils
 class NormalizeVgg19(object):
 
     # Input should be an rgb image [batch, height, width, 3]
@@ -44,13 +44,14 @@ class NormalizeVgg19(object):
         b_init = tf.constant_initializer(self.weight[name + '_b'])
 
         layer = tf.layers.conv2d(input,
-                                     name=name,
-                                     padding='SAME',
-                                     activation=tf.nn.relu,
-                                     kernel_size=3,
-                                     kernel_initializer=W_init,
-                                     bias_initializer=b_init,
-                                     trainable=False)
+                                 filters=utils.get_channel_number_from_vgg19_layer(name),
+                                 name=name,
+                                 padding='SAME',
+                                 activation=tf.nn.relu,
+                                 kernel_size=3,
+                                 kernel_initializer=W_init,
+                                 bias_initializer=b_init,
+                                 trainable=False)
         return layer
 
     def avg_pool(self,input,name):
