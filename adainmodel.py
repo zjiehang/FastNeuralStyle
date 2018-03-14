@@ -188,8 +188,8 @@ class AdaInModel(Model):
                 smean, svar = tf.nn.moments(x[layer], [1, 2])
                 dmean, dvar = tf.nn.moments(y[layer], [1, 2])
 
-                m_loss = utils.mean_squared(smean, dmean) / batch_size
-                v_loss = utils.mean_squared(tf.sqrt(svar), tf.sqrt(dvar)) / batch_size
+                m_loss = tf.reduce_sum(tf.squared_difference(smean, dmean)) / batch_size
+                v_loss = tf.reduce_sum(tf.squared_difference(tf.sqrt(svar), tf.sqrt(dvar))) / batch_size
 
                 style_loss_list.append(m_loss + v_loss)
 

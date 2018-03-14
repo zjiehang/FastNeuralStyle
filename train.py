@@ -45,7 +45,7 @@ if __name__ == '__main__':
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
     parser.add_argument("--contentlossweight",default=1.0,type=float)
-    parser.add_argument("--stylelossweight",default=1.0,type=float)
+    parser.add_argument("--stylelossweight",default=1e-2,type=float)
     parser.add_argument("--tvlossweight",default=0.0,type=float)
     parser.add_argument("--realisticlossweight", default=0, type=float)
     parser.add_argument("--usegram",default=False,type=bool)

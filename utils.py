@@ -79,7 +79,7 @@ def get_channel_number_from_vgg19_layer(layer):
 
 
 def mean_squared(x,y):
-    return tf.reduce_mean(tf.square( x - y ))
+    return tf.reduce_mean(tf.squared_difference(x,y))
 
 
 def gram_matrix(feature_maps):
