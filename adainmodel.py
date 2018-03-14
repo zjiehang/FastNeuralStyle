@@ -64,7 +64,7 @@ class AdaInModel(Model):
         self.summaryMerge()
 
         self.sess = tf.Session()
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(tf.trainable_variables())
 
     def buildPredictModel(self):
         self.image = tf.placeholder(tf.float32,[None,None,None,3],name='image')
@@ -83,7 +83,7 @@ class AdaInModel(Model):
             self.decoder_output = self.buildDecoder(self.adain_output)
 
         self.sess = tf.Session()
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(tf.trainable_variables())
 
     def buildAdainLayer(self,content,style):
         adain_content_input_tl = tl.InputLayer(content, name='adain-content-input-tl')
