@@ -33,7 +33,7 @@ def main(_):
     network = AdaInModel(FLAGS.pretrainedpath,
                          FLAGS.adainoutputproportion,
                          FLAGS.contentlosslayer)
-    network.buildModel(isTrain=False)
+    network.buildPredictModel()
     network.resume(FLAGS.reusedir)
 
     print('There are %d content pictures !'%(len(content_batch)))
@@ -46,9 +46,7 @@ def main(_):
         for style in style_batch:
             each_time = time.time()
             content_array = tl.visualize.read_image(content,content_path)
-            content_array = tl.prepro.imresize(content_array,[512,512])
             style_array = tl.visualize.read_image(style,style_path)
-            style_array = tl.prepro.imresize(style_array,[512,512])
             content_name, content_post = os.path.splitext(content)
             style_name, style_post = os.path.splitext(style)
             output = network.predict([content_array],[style_array])

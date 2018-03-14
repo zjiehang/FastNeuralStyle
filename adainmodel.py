@@ -47,82 +47,17 @@ class AdaInModel(Model):
         self.adain_content_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='adain-content-input')
         self.adain_style_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='adain-style-input')
 
-
         with tf.variable_scope('AdaIn-layer'):
-            adain_content_input_tl = tl.InputLayer(self.adain_content_input,name='adain-content-input-tl')
-            adain_style_input_tl = tl.InputLayer(self.adain_style_input,name='adain-style-input-tl')
-            adain_output_layer = AdaINLayer([adain_content_input_tl,adain_style_input_tl],
-                                           self.adain_output_proportion,
-                                           name='adain-layer')
-
-            self.adain_output = tf.identity(adain_output_layer.outputs,name='adain-output')
-
-            '''
-            adain_content_input = tl.InputLayer(encoder_content_output,name='adain-content-input')
-            adain_style_input = tl.InputLayer(encoder_style_output,name='adain-style-input')
-            self.adain_output = AdaINLayer([adain_content_input,adain_style_input],self.adain_output_proportion,name='adain-layer')
-            '''
+            self.adain_output = self.buildAdainLayer(self.adain_content_input,self.adain_style_input)
 
         with tf.variable_scope('decoder'):
-            decoder_middle = tl.InputLayer(self.adain_output,name='decoder-input')
-
-            channels = self.adain_input_channels
-            decoder_layer_detail = utils.get_vgg19_decoder_layers_detail(self.content_loss_layer)
-            decoder_layer_numbers = len(decoder_layer_detail)
-
-            for i in range(decoder_layer_numbers,0,-1):
-                for j in range(decoder_layer_detail[i-1],1,-1):
-                    decoder_middle = tl.Conv2d(decoder_middle,
-                                               n_filter=channels,
-                                               filter_size=[3,3],
-                                               act=tf.nn.relu,
-                                               name='conv%d_%d'%(i,j))
-                channels = channels // 2
-                if i!=1:
-                    decoder_middle = tl.Conv2d(decoder_middle,
-                                               n_filter=channels,
-                                               filter_size=[3,3],
-                                               act=tf.nn.relu,
-                                               name='conv%d_%d'%(i,1))
-                    decoder_middle = UnpoolLayer(decoder_middle,scale=2,name='unpool%d'%(i-1))
-                else:
-                    decoder_middle = tl.Conv2d(decoder_middle,
-                                               n_filter=3,
-                                               filter_size=[3,3],
-                                               act=tf.nn.relu,
-                                               name='conv%d_%d'%(i,1))
-
-            self.images = tf.identity(decoder_middle.outputs,name='decoder-output')
-            '''
-            decoder_layer_detail = utils.get_vgg19_decoder_layers_detail(self.content_loss_layer)
-
-            decoder_input_channel = self.adain_output.outputs.get_shape()[-1].value
-            decoder_layer_numbers = len(decoder_layer_detail)
-
-            decoder_mild = tl.InputLayer(self.adain_output.outputs,name='decoder-input')
-            for i in range(decoder_layer_numbers,0,-1):
-                for j in range(decoder_layer_detail[i-1],0,-1):
-                    decoder_mild = tl.Conv2d(decoder_mild,decoder_input_channel,[3,3],act=tf.nn.relu,name='conv%d_%d'%(i,j))
-                if i!=1:
-                    decoder_input_channel = decoder_input_channel // 2
-                    decoder_mild = TransposedConv2dLayer(decoder_mild,decoder_input_channel,[3,3],[2,2],name='deconv%d'%(i-1))
-                else:
-                    decoder_mild = tl.Conv2d(decoder_mild,self.channels,[1,1],act=tf.nn.relu,name='conv%d_%d'%(0,0))
-
-            self.outputs = tf.clip_by_value(decoder_mild.outputs,0.0,1.0)
-            '''
+            self.images = self.buildDecoder(self.adain_output)
 
         with tf.variable_scope('encoder'):
             with open_weights(self.pretrained_vgg_path) as weight:
                 vgg19 = NormalizeVgg19(self.images,weight)
             self.encoder_content_output = getattr(vgg19,self.content_loss_layer)
             self.encoder_style_output = {layer:getattr(vgg19,layer) for layer in self.style_loss_layers_list}
-            '''
-            self.vgg_encode_content_input = CustomVgg19(self.content_input_norm,self.pretrained_vgg_path)
-            self.vgg_encode_style_input = CustomVgg19(self.style_input_norm,self.pretrained_vgg_path)
-            encoder_content_output = getattr(self.vgg_encode_content_input,self.content_loss_layer)
-            encoder_style_output = getattr(self.vgg_encode_style_input,self.content_loss_layer)
-            '''
 
         self.calculateLoss()
         self.buildOptimizer()
@@ -130,6 +65,65 @@ class AdaInModel(Model):
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver()
+
+    def buildPredictModel(self):
+        self.image = tf.placeholder(tf.float32,[None,None,None,3],name='image')
+        self.content = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='content')
+        self.style = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='style')
+
+        with tf.variable_scope('encoder'):
+            with open_weights(self.pretrained_vgg_path) as weight:
+                vgg19 = NormalizeVgg19(self.image,weight)
+            self.encoder_output = getattr(vgg19,self.content_loss_layer)
+
+        with tf.variable_scope('AdaIn-layer'):
+            self.adain_output = self.buildAdainLayer(self.content,self.style)
+
+        with tf.variable_scope('decoder'):
+            self.decoder_output = self.buildDecoder(self.adain_output)
+
+        self.sess = tf.Session()
+        self.saver = tf.train.Saver()
+
+    def buildAdainLayer(self,content,style):
+        adain_content_input_tl = tl.InputLayer(content, name='adain-content-input-tl')
+        adain_style_input_tl = tl.InputLayer(style, name='adain-style-input-tl')
+        adain_output_layer = AdaINLayer([adain_content_input_tl, adain_style_input_tl],
+                                        self.adain_output_proportion,
+                                        name='adain-layer')
+
+        return tf.identity(adain_output_layer.outputs, name='adain-output')
+
+    def buildDecoder(self,adain_output):
+        decoder_middle = tl.InputLayer(adain_output, name='decoder-input')
+
+        channels = self.adain_input_channels
+        decoder_layer_detail = utils.get_vgg19_decoder_layers_detail(self.content_loss_layer)
+        decoder_layer_numbers = len(decoder_layer_detail)
+
+        for i in range(decoder_layer_numbers, 0, -1):
+            for j in range(decoder_layer_detail[i - 1], 1, -1):
+                decoder_middle = tl.Conv2d(decoder_middle,
+                                           n_filter=channels,
+                                           filter_size=[3, 3],
+                                           act=tf.nn.relu,
+                                           name='conv%d_%d' % (i, j))
+            channels = channels // 2
+            if i != 1:
+                decoder_middle = tl.Conv2d(decoder_middle,
+                                           n_filter=channels,
+                                           filter_size=[3, 3],
+                                           act=tf.nn.relu,
+                                           name='conv%d_%d' % (i, 1))
+                decoder_middle = UnpoolLayer(decoder_middle, scale=2, name='unpool%d' % (i - 1))
+            else:
+                decoder_middle = tl.Conv2d(decoder_middle,
+                                           n_filter=3,
+                                           filter_size=[3, 3],
+                                           act=tf.nn.relu,
+                                           name='conv%d_%d' % (i, 1))
+
+        return tf.identity(decoder_middle.outputs,name='decoder-output')
 
 
     def calculateLoss(self):
@@ -172,11 +166,6 @@ class AdaInModel(Model):
             tf.summary.scalar('style-loss',self.style_loss)
             tf.summary.scalar('tv-loss',self.tv_loss)
             tf.summary.scalar('all-loss',self.all_loss)
-            '''
-            tf.summary.image('content-image',tf.clip_by_value(self.,0,1))
-            tf.summary.image('style-image',tf.clip_by_value(self.style_input_norm,0,1))
-            tf.summary.image('stylied-image',tf.clip_by_value(self.outputs,0,1))
-            '''
         self.summary_op = tf.summary.merge_all()
 
 

@@ -21,6 +21,10 @@ class Model(object, metaclass=ABCMeta):
     def buildTrainModel(self):
         pass
 
+    @abstractmethod
+    def buildPredictModel(self):
+        pass
+
     """
     Save the current state of the network to file
     """
@@ -51,7 +55,11 @@ class Model(object, metaclass=ABCMeta):
     x: (tf.float32, [batch_size, h, w, output_channels])
     """
     def predict(self, content,style):
-        return self.sess.run(self.outputs, feed_dict={self.content_input:content,self.style_input:style})
+        content_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:content})
+        style_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:style})
+
+        return self.sess.run(self.output,feed_dict={self.content:content_encoded,
+                                                    self.style:style_encoded})
 
     """
     Train the neural network
