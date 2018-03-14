@@ -58,7 +58,7 @@ class Model(object, metaclass=ABCMeta):
         content_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:content})
         style_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:style})
 
-        return self.sess.run(self.output,feed_dict={self.content:content_encoded,
+        return self.sess.run(self.decoder_output,feed_dict={self.content:content_encoded,
                                                     self.style:style_encoded})
 
     """
