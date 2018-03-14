@@ -84,6 +84,7 @@ class AdaInModel(Model):
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver(tf.trainable_variables())
+        self.sess.run(tf.global_variables_initializer())
 
     def buildAdainLayer(self,content,style):
         adain_content_input_tl = tl.InputLayer(content, name='adain-content-input-tl')
