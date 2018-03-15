@@ -173,7 +173,7 @@ class AdaInModel(Model):
     def calculate_content_loss(self,weight,x,y):
         return weight * utils.mean_squared(x,y)
 
-    def calculate_style_loss(self,weight,use_gram,batch_size,x,y):
+    def calculate_style_loss(self,weight,use_gram,batch_size,x,y,epsilon=1e-5):
         if use_gram is True:
             gram_losses = []
             for layer in self.style_loss_layers_list:
@@ -189,7 +189,7 @@ class AdaInModel(Model):
                 dmean, dvar = tf.nn.moments(y[layer], [1, 2])
 
                 m_loss = tf.reduce_sum(tf.squared_difference(smean, dmean)) / batch_size
-                v_loss = tf.reduce_sum(tf.squared_difference(tf.sqrt(svar), tf.sqrt(dvar))) / batch_size
+                v_loss = tf.reduce_sum(tf.squared_difference(tf.sqrt(svar + epsilon), tf.sqrt(dvar + epsilon))) / batch_size
 
                 style_loss_list.append(m_loss + v_loss)
 
