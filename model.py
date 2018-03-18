@@ -64,7 +64,7 @@ class Model(object, metaclass=ABCMeta):
     """
     Train the neural network
     """
-    def train(self,batch_size= 10, iterations=1000,save_dir="saved_models",reuse=False,reuse_dir=None,log_dir="log",summary_iter=100,save_iter=1000):
+    def train(self,batch_size= 10, iterations=1000,save_dir="saved_models",reuse=False,reuse_dir=None,log_dir="log",summary_iter=100,save_iter=1000,use_affine=False):
 
         #create the save directory if not exist
         if os.path.exists(save_dir):
@@ -88,7 +88,10 @@ class Model(object, metaclass=ABCMeta):
             #This is our training loop
             for i in tqdm(range(iterations)):
                 start = time.time()
-                content,style = self.data.get_batch(batch_size)
+                content,style,matpath = self.data.get_batch(batch_size)
+                if use_affine:
+                    sparse_tensor_value = utils.get_sqarse_tensor_value_by_mat(matpath,content[0].shape[0])
+
 
                 # step 1
                 # encode content and style images
@@ -98,6 +101,7 @@ class Model(object, metaclass=ABCMeta):
                 content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:content})
                 style_batch_encoded,style_target_value = self.sess.run([self.encoder_content_output,self.encoder_style_output]
                                                                   ,feed_dict={self.images:style})
+
 
                 # step 2
                 # calculate the loss and run the train operation
@@ -110,6 +114,7 @@ class Model(object, metaclass=ABCMeta):
                     'content_loss': self.content_loss,
                     'style_loss': self.style_loss,
                     'tv_loss': self.tv_loss,
+                    'affine_loss': self.affine_loss
                 }
                 feed_dict = {
                     self.adain_content_input:content_batch_encoded,
@@ -118,6 +123,10 @@ class Model(object, metaclass=ABCMeta):
                 }
                 for layer in self.style_loss_layers_list:
                     feed_dict[self.style_target[layer]] = style_target_value[layer]
+                if use_affine:
+                    for j in range(len(sparse_tensor_value)):
+                        feed_dict[self.sparse_tensor_list[j]] = sparse_tensor_value
+
 
                 result = sess.run(fetches, feed_dict=feed_dict)
 
@@ -130,8 +139,8 @@ class Model(object, metaclass=ABCMeta):
                     self.save(save_dir,result['global_step'])
 
                 ### Debug
-                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  Time: {:.5f}".format(
-                    result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],time.time() - start))
+                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  affine: {:.5f}  Time: {:.5f}".format(
+                    result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],result['affine_loss'],time.time() - start))
 
                 # Last save
             self.save(save_dir, result['global_step'])

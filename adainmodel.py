@@ -18,7 +18,8 @@ class AdaInModel(Model):
                  content_loss_weight = 1.0,
                  style_loss_weight = 1.0,
                  tv_loss_weight = 0.0,
-                 realistic_loss_weight = 0.0,
+                 use_affine = False,
+                 affine_loss_weight = 0.0,
                  use_gram = False,
                  batch_size = 10,
                  learning_rate = 1e-4,
@@ -27,10 +28,11 @@ class AdaInModel(Model):
         self.adain_output_proportion = adain_output_proportion
         self.content_loss_layer = content_loss_layer
         self.style_loss_layers_list = style_loss_layer.split(';')
-        self.content_loss_weight = content_loss_weight,
-        self.style_loss_weight = style_loss_weight,
-        self.tv_loss_weight = tv_loss_weight,
-        self.realistic_loss_weight = realistic_loss_weight,
+        self.content_loss_weight = content_loss_weight
+        self.style_loss_weight = style_loss_weight
+        self.tv_loss_weight = tv_loss_weight
+        self.use_affine = use_affine
+        self.affine_loss_weight = affine_loss_weight
         self.use_gram = use_gram
         self.batch_size = batch_size
         self.learning_rate = learning_rate
@@ -133,6 +135,10 @@ class AdaInModel(Model):
             layer:tf.placeholder(tf.float32,shape=[None,None,None,utils.get_channel_number_from_vgg19_layer(layer)])
             for layer in self.style_loss_layers_list
         }
+        if self.use_affine:
+            self.sparse_tensor_list = list()
+            for i in range(self.batch_size):
+                self.sparse_tensor_list.append(tf.sparse_placeholder(tf.float32))
 
         with tf.name_scope("loss"):
             with tf.name_scope("content-loss"):
@@ -141,10 +147,13 @@ class AdaInModel(Model):
                 self.style_loss = tf.squeeze(self.calculate_style_loss(self.style_loss_weight,self.use_gram,self.batch_size,self.encoder_style_output,self.style_target))
             with tf.name_scope("tv-loss"):
                 self.tv_loss = tf.squeeze(self.calculate_tv_loss(self.tv_loss_weight,self.images))
-            #with tf.name_scope("realistic-loss"):
-            #    self.realistic_loss = self.calculate_realistic_loss()
-        #self.all_loss = self.content_loss + self.style_loss + self.tv_loss + self.realistic_loss
-        self.all_loss = self.content_loss + self.style_loss + self.tv_loss
+            if self.use_affine:
+                with tf.name_scope("affine-loss"):
+                    self.affine_loss = self.calculate_affine_loss(self.affine_loss_weight,self.images,self.sparse_tensor_list)
+        if self.use_affine:
+            self.all_loss = self.content_loss + self.style_loss + self.tv_loss + self.affine_loss
+        else:
+            self.all_loss = self.content_loss + self.style_loss + self.tv_loss
 
     def buildOptimizer(self):
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -166,6 +175,7 @@ class AdaInModel(Model):
             tf.summary.scalar('content-loss',self.content_loss)
             tf.summary.scalar('style-loss',self.style_loss)
             tf.summary.scalar('tv-loss',self.tv_loss)
+            tf.summary.scalar('affine-loss', self.affine_loss)
             tf.summary.scalar('all-loss',self.all_loss)
         self.summary_op = tf.summary.merge_all()
 
@@ -199,3 +209,15 @@ class AdaInModel(Model):
 
     def calculate_tv_loss(self,weight,output):
         return tf.multiply(tf.reduce_mean(tf.image.total_variation(output)),weight)
+
+    def calculate_affine_loss(self,weight,output,matting):
+        loss_affine = 0.0
+        output_split = tf.split(output,axis=0,num_or_size_splits=self.batch_size)
+
+        for output_each,matting_each in zip(output_split,matting):
+            for Vc in tf.unstack(output_each, axis=-1):
+                Vc_ravel = tf.reshape(tf.transpose(Vc), [-1])
+                loss_affine += tf.matmul(tf.expand_dims(Vc_ravel, 0),
+                                     tf.sparse_tensor_dense_matmul(matting_each, tf.expand_dims(Vc_ravel, -1)))
+
+        return loss_affine * weight /self.batch_size

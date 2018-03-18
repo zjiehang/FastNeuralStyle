@@ -12,7 +12,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None
 
 def main(_):
-    data = Data(FLAGS.contentpath,FLAGS.stylepath,FLAGS.imgsize)
+    data = Data(FLAGS.contentpath,FLAGS.stylepath,FLAGS.matpath,FLAGS.imgsize)
     network = AdaInModel(FLAGS.pretrainedpath,
                          FLAGS.adainoutputproportion,
                          FLAGS.contentlosslayer,
@@ -20,7 +20,8 @@ def main(_):
                          FLAGS.contentlossweight,
                          FLAGS.stylelossweight,
                          FLAGS.tvlossweight,
-                         FLAGS.realisticlossweight,
+                         FLAGS.useaffine,
+                         FLAGS.affinelossweight,
                          FLAGS.usegram,
                          FLAGS.batchsize,
                          FLAGS.learningrate,
@@ -34,20 +35,23 @@ def main(_):
                   FLAGS.reusedir,
                   FLAGS.logdir,
                   FLAGS.summaryiter,
-                  FLAGS.saveiter)
+                  FLAGS.saveiter,
+                  FLAGS.useaffine)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--contentpath",default="images/content",type=str)
     parser.add_argument("--stylepath",default="images/style",type=str)
+    parser.add_argument("--matpath",default='images/mat',type=str)
     parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
-    parser.add_argument("--contentlossweight",default=1.0,type=float)
+    parser.add_argument("--contentlossweight",default=10.0,type=float)
     parser.add_argument("--stylelossweight",default=1e-2,type=float)
     parser.add_argument("--tvlossweight",default=0.0,type=float)
-    parser.add_argument("--realisticlossweight", default=0, type=float)
+    parser.add_argument("--useaffine",default=False,type=bool)
+    parser.add_argument("--affinelossweight", default=10.0, type=float)
     parser.add_argument("--usegram",default=False,type=bool)
 
     parser.add_argument("--imgsize",default=256,type=int)
