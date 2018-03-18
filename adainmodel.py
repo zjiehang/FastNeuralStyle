@@ -149,7 +149,7 @@ class AdaInModel(Model):
                 self.tv_loss = tf.squeeze(self.calculate_tv_loss(self.tv_loss_weight,self.images))
             if self.use_affine:
                 with tf.name_scope("affine-loss"):
-                    self.affine_loss = self.calculate_affine_loss(self.affine_loss_weight,self.images,self.sparse_tensor_list)
+                    self.affine_loss = tf.squeeze(self.calculate_affine_loss(self.affine_loss_weight,self.images,self.sparse_tensor_list))
         if self.use_affine:
             self.all_loss = self.content_loss + self.style_loss + self.tv_loss + self.affine_loss
         else:

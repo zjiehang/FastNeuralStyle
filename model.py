@@ -113,9 +113,11 @@ class Model(object, metaclass=ABCMeta):
                     'all_loss': self.all_loss,
                     'content_loss': self.content_loss,
                     'style_loss': self.style_loss,
-                    'tv_loss': self.tv_loss,
-                    'affine_loss': self.affine_loss
+                    'tv_loss': self.tv_loss
                 }
+                if use_affine:
+                    fetches['affine_loss']=self.affine_loss
+
                 feed_dict = {
                     self.adain_content_input:content_batch_encoded,
                     self.adain_style_input:style_batch_encoded,
@@ -125,7 +127,7 @@ class Model(object, metaclass=ABCMeta):
                     feed_dict[self.style_target[layer]] = style_target_value[layer]
                 if use_affine:
                     for j in range(len(sparse_tensor_value)):
-                        feed_dict[self.sparse_tensor_list[j]] = sparse_tensor_value
+                        feed_dict[self.sparse_tensor_list[j]] = sparse_tensor_value[j]
 
 
                 result = sess.run(fetches, feed_dict=feed_dict)
@@ -138,10 +140,13 @@ class Model(object, metaclass=ABCMeta):
                 if i % save_iter == 0:
                     self.save(save_dir,result['global_step'])
 
-                ### Debug
-                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  affine: {:.5f}  Time: {:.5f}".format(
-                    result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],result['affine_loss'],time.time() - start))
-
+                if use_affine:
+                    ### Debug
+                    print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  affine: {:.5f}  Time: {:.5f}".format(
+                        result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],result['affine_loss'],time.time() - start))
+                else:
+                    print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  Time: {:.5f}".format(
+                        result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],time.time() - start))
                 # Last save
             self.save(save_dir, result['global_step'])
             writer.close()

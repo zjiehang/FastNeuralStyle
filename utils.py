@@ -117,7 +117,7 @@ def get_sqarse_tensor_value_by_mat(matpath,imgsize):
     for matpatheach in matpath:
         read_in_numpy_array = scipy.io.loadmat(matpatheach)['CSR']
         indices = np.mat([read_in_numpy_array[:,0].astype(np.int32),read_in_numpy_array[:,1].astype(np.int32)]).transpose()
-        sqarse_tensor_value = tf.SparseTensor(indices,read_in_numpy_array[:,2].astype(np.float32),[imgsize*imgsize,imgsize*imgsize])
+        sqarse_tensor_value = tf.SparseTensorValue(indices,read_in_numpy_array[:,2].astype(np.float32),[imgsize*imgsize,imgsize*imgsize])
         sqarse_tensor_value_list.append(sqarse_tensor_value)
     return sqarse_tensor_value_list
 
