@@ -175,7 +175,8 @@ class AdaInModel(Model):
             tf.summary.scalar('content-loss',self.content_loss)
             tf.summary.scalar('style-loss',self.style_loss)
             tf.summary.scalar('tv-loss',self.tv_loss)
-            tf.summary.scalar('affine-loss', self.affine_loss)
+            if self.use_affine:
+                tf.summary.scalar('affine-loss', self.affine_loss)
             tf.summary.scalar('all-loss',self.all_loss)
         self.summary_op = tf.summary.merge_all()
 
