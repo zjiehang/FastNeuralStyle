@@ -47,9 +47,13 @@ def main(_):
             each_time = time.time()
             content_array = tl.visualize.read_image(content,content_path)
             style_array = tl.visualize.read_image(style,style_path)
+            content_array = content_array.astype(np.float32)/255.0
+            style_array = style_array.astype(np.float)/255.0
+
             content_name, content_post = os.path.splitext(content)
             style_name, style_post = os.path.splitext(style)
             output = network.predict([content_array],[style_array])[0]
+            output = np.clip(output,0.0,1.0)
             tl.vis.save_image(output,FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post)
             print('Successfully saved %s in %.5f s'%((FLAGS.outdir + '/' + content_name + '_stylized_' + style_name + content_post),float(time.time()-each_time)))
 
