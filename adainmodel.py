@@ -105,6 +105,7 @@ class AdaInModel(Model):
         wct_style_input_tl = tl.InputLayer(style, name='wct-style-input-tl')
         wct_output_layer = WCTLayer([wct_content_input_tl, wct_style_input_tl],
                                         self.adain_output_proportion,
+                                        batch_size=self.batch_size,
                                         name='wct-layer')
 
         return tf.identity(wct_output_layer.outputs, name='transform-output')
