@@ -2,7 +2,7 @@ import tensorlayer.layers as tl
 import tensorflow as tf
 
 class WCTLayer(tl.Layer):
-    def __init__(self,layer=[],proportion = 1.0,epsilon=1e-5,batch_size=8,name ='wct-layer'):
+    def __init__(self,layer=[],proportion = 1.0,epsilon=1e-5,eps=1e-8,batch_size=8,name ='wct-layer'):
         # check layer name (fixed)
         tl.Layer.__init__(self, name=name)
         print("  [TL] WCTLayer %s " %self.name)
