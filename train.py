@@ -20,6 +20,7 @@ def main(_):
                          FLAGS.contentlossweight,
                          FLAGS.stylelossweight,
                          FLAGS.tvlossweight,
+                         FLAGS.usewct,
                          FLAGS.useaffine,
                          FLAGS.affinelossweight,
                          FLAGS.usegram,
@@ -50,6 +51,7 @@ if __name__ == '__main__':
     parser.add_argument("--contentlossweight",default=10.0,type=float)
     parser.add_argument("--stylelossweight",default=1e-2,type=float)
     parser.add_argument("--tvlossweight",default=0.0,type=float)
+    parser.add_argument("--usewct",default=True,type=bool)
     parser.add_argument("--useaffine",default=False,type=bool)
     parser.add_argument("--affinelossweight", default=1e4, type=float)
     parser.add_argument("--usegram",default=False,type=bool)

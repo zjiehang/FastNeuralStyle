@@ -119,8 +119,8 @@ class Model(object, metaclass=ABCMeta):
                     fetches['affine_loss']=self.affine_loss
 
                 feed_dict = {
-                    self.adain_content_input:content_batch_encoded,
-                    self.adain_style_input:style_batch_encoded,
+                    self.content_input:content_batch_encoded,
+                    self.style_input:style_batch_encoded,
                     self.content_target:content_batch_encoded
                 }
                 for layer in self.style_loss_layers_list:

@@ -3,6 +3,7 @@ import tensorlayer.layers as tl
 from vgg.vgg19_normalize import NormalizeVgg19
 from model import Model
 from layer.AdaINLayer import AdaINLayer
+from layer.WCTLayer import WCTLayer
 from layer.UnpoolLayer import UnpoolLayer
 import os
 import utils
@@ -18,6 +19,7 @@ class AdaInModel(Model):
                  content_loss_weight = 1.0,
                  style_loss_weight = 1.0,
                  tv_loss_weight = 0.0,
+                 use_wct = True,
                  use_affine = False,
                  affine_loss_weight = 0.0,
                  use_gram = False,
@@ -31,6 +33,7 @@ class AdaInModel(Model):
         self.content_loss_weight = content_loss_weight
         self.style_loss_weight = style_loss_weight
         self.tv_loss_weight = tv_loss_weight
+        self.use_wct = use_wct
         self.use_affine = use_affine
         self.affine_loss_weight = affine_loss_weight
         self.use_gram = use_gram
@@ -46,14 +49,18 @@ class AdaInModel(Model):
 
     def buildTrainModel(self):
         # input for adain-lyaer
-        self.adain_content_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='adain-content-input')
-        self.adain_style_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='adain-style-input')
+        self.content_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='content-input')
+        self.style_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='style-input')
 
-        with tf.variable_scope('AdaIn-layer'):
-            self.adain_output = self.buildAdainLayer(self.adain_content_input,self.adain_style_input)
+        if self.use_wct:
+            with tf.variable_scope('wct-layer'):
+                self.transform_output = self.buildWCTLayer(self.content_input, self.style_input)
+        else:
+            with tf.variable_scope('AdaIn-layer'):
+                self.transform_output = self.buildAdainLayer(self.content_input,self.style_input)
 
         with tf.variable_scope('decoder'):
-            self.images = self.buildDecoder(self.adain_output)
+            self.images = self.buildDecoder(self.transform_output)
 
         with tf.variable_scope('encoder'):
             with open_weights(self.pretrained_vgg_path) as weight:
@@ -78,15 +85,30 @@ class AdaInModel(Model):
                 vgg19 = NormalizeVgg19(self.image,weight)
             self.encoder_output = getattr(vgg19,self.content_loss_layer)
 
-        with tf.variable_scope('AdaIn-layer'):
-            self.adain_output = self.buildAdainLayer(self.content,self.style)
+        if self.use_wct:
+            with tf.variable_scope('wct-layer'):
+                self.transform_output = self.buildWCTLayer(self.content,self.style)
+        else:
+            with tf.variable_scope('adain-layer'):
+                self.transform_output = self.buildAdainLayer(self.content,self.style)
+
 
         with tf.variable_scope('decoder'):
-            self.decoder_output = self.buildDecoder(self.adain_output)
+            self.decoder_output = self.buildDecoder(self.transform_output)
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver(tf.trainable_variables())
         self.sess.run(tf.global_variables_initializer())
+
+    def buildWCTLayer(self,content,style):
+        wct_content_input_tl = tl.InputLayer(content, name='wct-content-input-tl')
+        wct_style_input_tl = tl.InputLayer(style, name='wct-style-input-tl')
+        wct_output_layer = WCTLayer([wct_content_input_tl, wct_style_input_tl],
+                                        self.adain_output_proportion,
+                                        name='wct-layer')
+
+        return tf.identity(wct_output_layer.outputs, name='transform-output')
+
 
     def buildAdainLayer(self,content,style):
         adain_content_input_tl = tl.InputLayer(content, name='adain-content-input-tl')
@@ -95,7 +117,7 @@ class AdaInModel(Model):
                                         self.adain_output_proportion,
                                         name='adain-layer')
 
-        return tf.identity(adain_output_layer.outputs, name='adain-output')
+        return tf.identity(adain_output_layer.outputs, name='transform-output')
 
     def buildDecoder(self,adain_output):
         decoder_middle = tl.InputLayer(adain_output, name='decoder-input')
