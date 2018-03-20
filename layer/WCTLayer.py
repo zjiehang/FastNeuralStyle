@@ -8,8 +8,8 @@ class WCTLayer(tl.Layer):
         print("  [TL] WCTLayer %s " %self.name)
         # the input of this layer is the output of previous layer (fixed)
 
-        content_list = tf.split(layer[0],axis=0,num_or_size_splits=batch_size)
-        style_list = tf.split(layer[1],axis=0,num_or_size_splits=batch_size)
+        content_list = tf.split(layer[0].outputs,axis=0,num_or_size_splits=batch_size)
+        style_list = tf.split(layer[1].outputs,axis=0,num_or_size_splits=batch_size)
 
         self.outputs = None
 
