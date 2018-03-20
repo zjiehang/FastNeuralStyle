@@ -129,25 +129,40 @@ class AdaInModel(Model):
 
         for i in range(decoder_layer_numbers, 0, -1):
             for j in range(decoder_layer_detail[i - 1], 1, -1):
-                decoder_middle = tl.Conv2d(decoder_middle,
-                                           n_filter=channels,
-                                           filter_size=[3, 3],
-                                           act=tf.nn.relu,
-                                           name='conv%d_%d' % (i, j))
+                decoder_middle = tl.Conv2dLayer(decoder_middle,
+                                                shape=[3,3,channels,channels],
+                                                strides=[1,1,1,1],
+                                                act=tf.nn.relu,
+                                                name='conv%d_%d' % (i, j))
+                #decoder_middle = tl.Conv2d(decoder_middle,
+                #                           n_filter=channels,
+                #                           filter_size=[3, 3],
+                #                           act=tf.nn.relu,
+                #                           name='conv%d_%d' % (i, j))
             channels = channels // 2
             if i != 1:
-                decoder_middle = tl.Conv2d(decoder_middle,
-                                           n_filter=channels,
-                                           filter_size=[3, 3],
-                                           act=tf.nn.relu,
-                                           name='conv%d_%d' % (i, 1))
+                decoder_middle = tl.Conv2dLayer(decoder_middle,
+                                                shape=[3,3,channels*2,channels],
+                                                strides=[1,1,1,1],
+                                                act=tf.nn.relu,
+                                                name='conv%d_%d' % (i, 1))
+                #decoder_middle = tl.Conv2d(decoder_middle,
+                #                           n_filter=channels,
+                #                           filter_size=[3, 3],
+                #                           act=tf.nn.relu,
+                #                           name='conv%d_%d' % (i, 1))
                 decoder_middle = UnpoolLayer(decoder_middle, scale=2, name='unpool%d' % (i - 1))
             else:
-                decoder_middle = tl.Conv2d(decoder_middle,
-                                           n_filter=3,
-                                           filter_size=[3, 3],
-                                           act=tf.nn.relu,
-                                           name='conv%d_%d' % (i, 1))
+                decoder_middle = tl.Conv2dLayer(decoder_middle,
+                                                shape=[3,3,channels,3],
+                                                strides=[1,1,1,1],
+                                                act=tf.nn.relu,
+                                                name='conv%d_%d' % (i, 1))
+                #decoder_middle = tl.Conv2d(decoder_middle,
+                #                           n_filter=3,
+                #                           filter_size=[3, 3],
+                #                           act=tf.nn.relu,
+                #                           name='conv%d_%d' % (i, 1))
 
         return tf.identity(decoder_middle.outputs,name='decoder-output')
 
