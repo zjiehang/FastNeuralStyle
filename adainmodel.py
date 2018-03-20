@@ -139,8 +139,8 @@ class AdaInModel(Model):
                 #                           filter_size=[3, 3],
                 #                           act=tf.nn.relu,
                 #                           name='conv%d_%d' % (i, j))
-            channels = channels // 2
             if i != 1:
+                channels = channels // 2
                 decoder_middle = tl.Conv2dLayer(decoder_middle,
                                                 shape=[3,3,channels*2,channels],
                                                 strides=[1,1,1,1],
