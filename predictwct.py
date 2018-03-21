@@ -8,7 +8,7 @@ import numpy as np
 import argparse
 import os
 import time
-from adainmodel import AdaInModel
+from wctmodel import WCTModel
 from coral import coral_numpy
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
@@ -31,9 +31,9 @@ def main(_):
     content_path,content_batch = get_all_batch_from_path(FLAGS.contentpath)
     style_path,style_batch = get_all_batch_from_path(FLAGS.stylepath)
 
-    network = AdaInModel(FLAGS.pretrainedpath,
-                         FLAGS.adainoutputproportion,
-                         FLAGS.contentlosslayer)
+    network = WCTModel(FLAGS.pretrainedpath,
+                       FLAGS.wctoutputproportion,
+                       FLAGS.contentlosslayer)
     network.buildPredictModel()
     network.resume(FLAGS.reusedir)
 
@@ -70,11 +70,11 @@ if __name__ == '__main__':
     parser.add_argument("--contentpath",default="input/content",type=str)
     parser.add_argument("--stylepath",default="input/style",type=str)
     parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
-    parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
+    parser.add_argument("--contentlosslayer",default="conv5_1",type=str)
     parser.add_argument("--preservecolor",default=True,type=bool)
     #parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
-    parser.add_argument("--adainoutputproportion",default=1.0,type=float)
-    parser.add_argument("--outdir",default='output',type=str)
-    parser.add_argument("--reusedir", default='ckpt/adain_10000', type=str)
+    parser.add_argument("--wctoutputproportion",default=1.0,type=float)
+    parser.add_argument("--outdir",default='outfile/wct_10000',type=str)
+    parser.add_argument("--reusedir", default='ckpt/wct_10000', type=str)
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
