@@ -155,7 +155,7 @@ class WCTModel(Model):
                 # output : the vgg19 encoded version of content / style image
 
                 content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:content})
-                style_batch_encoded = self.sess.run([self.encoder_content_output],feed_dict={self.images:style})
+                style_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:style})
 
                 # step 2
                 # calculate the loss and run the train operation
