@@ -76,7 +76,7 @@ class WCTModel(Model):
             self.transform_output = self.buildWCTLayer(self.content,self.style)
 
         with tf.variable_scope('decoder'):
-            self.decoder_output = self.buildDecoder(self.transform_output)
+            self.decoder_output = self.buildDecoder(self.transform_output,self.wct_input_channels)
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver(tf.trainable_variables())
