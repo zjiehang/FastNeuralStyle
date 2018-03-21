@@ -12,7 +12,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None
 
 def main(_):
-    data = Data(FLAGS.contentpath,FLAGS.stylepath,FLAGS.matpath,FLAGS.imgsize)
+    data = Data(FLAGS.contentpath,FLAGS.stylepath,FLAGS.imgsize)
     network = AdaInModel(FLAGS.pretrainedpath,
                          FLAGS.adainoutputproportion,
                          FLAGS.contentlosslayer,
@@ -20,9 +20,6 @@ def main(_):
                          FLAGS.contentlossweight,
                          FLAGS.stylelossweight,
                          FLAGS.tvlossweight,
-                         FLAGS.usewct,
-                         FLAGS.useaffine,
-                         FLAGS.affinelossweight,
                          FLAGS.usegram,
                          FLAGS.batchsize,
                          FLAGS.learningrate,
@@ -36,24 +33,19 @@ def main(_):
                   FLAGS.reusedir,
                   FLAGS.logdir,
                   FLAGS.summaryiter,
-                  FLAGS.saveiter,
-                  FLAGS.useaffine)
+                  FLAGS.saveiter)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--contentpath",default="images/content",type=str)
     parser.add_argument("--stylepath",default="images/style",type=str)
-    parser.add_argument("--matpath",default='images/mat',type=str)
     parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
     parser.add_argument("--contentlosslayer",default="conv4_1",type=str)
     parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
     parser.add_argument("--contentlossweight",default=10.0,type=float)
     parser.add_argument("--stylelossweight",default=1e-2,type=float)
     parser.add_argument("--tvlossweight",default=0.0,type=float)
-    parser.add_argument("--usewct",default=True,type=bool)
-    parser.add_argument("--useaffine",default=False,type=bool)
-    parser.add_argument("--affinelossweight", default=1e4, type=float)
     parser.add_argument("--usegram",default=False,type=bool)
 
     parser.add_argument("--imgsize",default=256,type=int)
@@ -66,8 +58,8 @@ if __name__ == '__main__':
     parser.add_argument("--summaryiter",default=100,type=int)
     parser.add_argument("--saveiter",default=1000,type=int)
 
-    parser.add_argument("--savedir",default='ckpt/adain_10000',type=str)
-    parser.add_argument("--logdir",default='logfile/adain_10000',type=str)
-    parser.add_argument("--reusedir", default='ckpt/adain_10000', type=str)
+    parser.add_argument("--savedir",default='ckpt/adain_test',type=str)
+    parser.add_argument("--logdir",default='logfile/adain_10000_test',type=str)
+    parser.add_argument("--reusedir", default='ckpt/adain_10000_test', type=str)
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

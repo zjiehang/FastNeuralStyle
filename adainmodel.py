@@ -3,10 +3,11 @@ import tensorlayer.layers as tl
 from vgg.vgg19_normalize import NormalizeVgg19
 from model import Model
 from layer.AdaINLayer import AdaINLayer
-from layer.WCTLayer import WCTLayer
-from layer.UnpoolLayer import UnpoolLayer
+import shutil
 import os
 import utils
+import time
+from tqdm import tqdm
 from weights import open_weights
 
 
@@ -19,9 +20,6 @@ class AdaInModel(Model):
                  content_loss_weight = 1.0,
                  style_loss_weight = 1.0,
                  tv_loss_weight = 0.0,
-                 use_wct = True,
-                 use_affine = False,
-                 affine_loss_weight = 0.0,
                  use_gram = False,
                  batch_size = 10,
                  learning_rate = 1e-4,
@@ -33,9 +31,6 @@ class AdaInModel(Model):
         self.content_loss_weight = content_loss_weight
         self.style_loss_weight = style_loss_weight
         self.tv_loss_weight = tv_loss_weight
-        self.use_wct = use_wct
-        self.use_affine = use_affine
-        self.affine_loss_weight = affine_loss_weight
         self.use_gram = use_gram
         self.batch_size = batch_size
         self.learning_rate = learning_rate
@@ -52,15 +47,12 @@ class AdaInModel(Model):
         self.content_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='content-input')
         self.style_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='style-input')
 
-        if self.use_wct:
-            with tf.variable_scope('wct-layer'):
-                self.transform_output = self.buildWCTLayer(self.content_input, self.style_input)
-        else:
-            with tf.variable_scope('AdaIn-layer'):
-                self.transform_output = self.buildAdainLayer(self.content_input,self.style_input)
+
+        with tf.variable_scope('AdaIn-layer'):
+            self.transform_output = self.buildAdainLayer(self.content_input,self.style_input)
 
         with tf.variable_scope('decoder'):
-            self.images = self.buildDecoder(self.transform_output)
+            self.images = self.buildDecoder(self.transform_output,self.adain_input_channels)
 
         with tf.variable_scope('encoder'):
             with open_weights(self.pretrained_vgg_path) as weight:
@@ -85,30 +77,15 @@ class AdaInModel(Model):
                 vgg19 = NormalizeVgg19(self.image,weight)
             self.encoder_output = getattr(vgg19,self.content_loss_layer)
 
-        if self.use_wct:
-            with tf.variable_scope('wct-layer'):
-                self.transform_output = self.buildWCTLayer(self.content,self.style)
-        else:
-            with tf.variable_scope('adain-layer'):
-                self.transform_output = self.buildAdainLayer(self.content,self.style)
-
+        with tf.variable_scope('adain-layer'):
+            self.transform_output = self.buildAdainLayer(self.content,self.style)
 
         with tf.variable_scope('decoder'):
-            self.decoder_output = self.buildDecoder(self.transform_output)
+            self.decoder_output = self.buildDecoder(self.transform_output,self.adain_input_channels)
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver(tf.trainable_variables())
         self.sess.run(tf.global_variables_initializer())
-
-    def buildWCTLayer(self,content,style):
-        wct_content_input_tl = tl.InputLayer(content, name='wct-content-input-tl')
-        wct_style_input_tl = tl.InputLayer(style, name='wct-style-input-tl')
-        wct_output_layer = WCTLayer([wct_content_input_tl, wct_style_input_tl],
-                                        self.adain_output_proportion,
-                                        batch_size=self.batch_size,
-                                        name='wct-layer')
-
-        return tf.identity(wct_output_layer.outputs, name='transform-output')
 
 
     def buildAdainLayer(self,content,style):
@@ -120,63 +97,12 @@ class AdaInModel(Model):
 
         return tf.identity(adain_output_layer.outputs, name='transform-output')
 
-    def buildDecoder(self,adain_output):
-        decoder_middle = tl.InputLayer(adain_output, name='decoder-input')
-
-        channels = self.adain_input_channels
-        decoder_layer_detail = utils.get_vgg19_decoder_layers_detail(self.content_loss_layer)
-        decoder_layer_numbers = len(decoder_layer_detail)
-
-        for i in range(decoder_layer_numbers, 0, -1):
-            for j in range(decoder_layer_detail[i - 1], 1, -1):
-                decoder_middle = tl.Conv2dLayer(decoder_middle,
-                                                shape=[3,3,channels,channels],
-                                                strides=[1,1,1,1],
-                                                act=tf.nn.relu,
-                                                name='conv%d_%d' % (i, j))
-                #decoder_middle = tl.Conv2d(decoder_middle,
-                #                           n_filter=channels,
-                #                           filter_size=[3, 3],
-                #                           act=tf.nn.relu,
-                #                           name='conv%d_%d' % (i, j))
-            if i != 1:
-                channels = channels // 2
-                decoder_middle = tl.Conv2dLayer(decoder_middle,
-                                                shape=[3,3,channels*2,channels],
-                                                strides=[1,1,1,1],
-                                                act=tf.nn.relu,
-                                                name='conv%d_%d' % (i, 1))
-                #decoder_middle = tl.Conv2d(decoder_middle,
-                #                           n_filter=channels,
-                #                           filter_size=[3, 3],
-                #                           act=tf.nn.relu,
-                #                           name='conv%d_%d' % (i, 1))
-                decoder_middle = UnpoolLayer(decoder_middle, scale=2, name='unpool%d' % (i - 1))
-            else:
-                decoder_middle = tl.Conv2dLayer(decoder_middle,
-                                                shape=[3,3,channels,3],
-                                                strides=[1,1,1,1],
-                                                act=tf.nn.relu,
-                                                name='conv%d_%d' % (i, 1))
-                #decoder_middle = tl.Conv2d(decoder_middle,
-                #                           n_filter=3,
-                #                           filter_size=[3, 3],
-                #                           act=tf.nn.relu,
-                #                           name='conv%d_%d' % (i, 1))
-
-        return tf.identity(decoder_middle.outputs,name='decoder-output')
-
-
     def calculateLoss(self):
         self.content_target = tf.placeholder(tf.float32,shape=[None,None,None,self.adain_input_channels])
         self.style_target = {
             layer:tf.placeholder(tf.float32,shape=[None,None,None,utils.get_channel_number_from_vgg19_layer(layer)])
             for layer in self.style_loss_layers_list
         }
-        if self.use_affine:
-            self.sparse_tensor_list = list()
-            for i in range(self.batch_size):
-                self.sparse_tensor_list.append(tf.sparse_placeholder(tf.float32))
 
         with tf.name_scope("loss"):
             with tf.name_scope("content-loss"):
@@ -185,38 +111,8 @@ class AdaInModel(Model):
                 self.style_loss = tf.squeeze(self.calculate_style_loss(self.style_loss_weight,self.use_gram,self.batch_size,self.encoder_style_output,self.style_target))
             with tf.name_scope("tv-loss"):
                 self.tv_loss = tf.squeeze(self.calculate_tv_loss(self.tv_loss_weight,self.images))
-            if self.use_affine:
-                with tf.name_scope("affine-loss"):
-                    self.affine_loss = tf.squeeze(self.calculate_affine_loss(self.affine_loss_weight,self.images,self.sparse_tensor_list))
-        if self.use_affine:
-            self.all_loss = self.content_loss + self.style_loss + self.tv_loss + self.affine_loss
-        else:
-            self.all_loss = self.content_loss + self.style_loss + self.tv_loss
 
-    def buildOptimizer(self):
-        self.global_step = tf.Variable(0, name="global_step", trainable=False)
-
-        self.learning_rate = tf.train.inverse_time_decay(self.learning_rate,
-                                                         self.global_step,
-                                                         decay_steps=1,
-                                                         decay_rate=self.learning_rate_decay)
-
-        #self.learning_rate = utils.learning_rate_decay(self.learning_rate,
-        #                                               self.global_step,
-        #                                               self.learning_rate_decay)
-
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.all_loss,global_step=self.global_step)
-
-
-    def summaryMerge(self):
-        with tf.name_scope('summary'):
-            tf.summary.scalar('content-loss',self.content_loss)
-            tf.summary.scalar('style-loss',self.style_loss)
-            tf.summary.scalar('tv-loss',self.tv_loss)
-            if self.use_affine:
-                tf.summary.scalar('affine-loss', self.affine_loss)
-            tf.summary.scalar('all-loss',self.all_loss)
-        self.summary_op = tf.summary.merge_all()
+        self.all_loss = self.content_loss + self.style_loss + self.tv_loss
 
 
     def calculate_content_loss(self,weight,x,y):
@@ -249,14 +145,88 @@ class AdaInModel(Model):
     def calculate_tv_loss(self,weight,output):
         return tf.multiply(tf.reduce_mean(tf.image.total_variation(output)),weight)
 
-    def calculate_affine_loss(self,weight,output,matting):
-        loss_affine = 0.0
-        output_split = tf.split(output,axis=0,num_or_size_splits=self.batch_size)
 
-        for output_each,matting_each in zip(output_split,matting):
-            for Vc in tf.unstack(output_each, axis=-1):
-                Vc_ravel = tf.reshape(tf.transpose(Vc), [-1])
-                loss_affine += tf.matmul(tf.expand_dims(Vc_ravel, 0),
-                                     tf.sparse_tensor_dense_matmul(matting_each, tf.expand_dims(Vc_ravel, -1)))
+    def summaryMerge(self):
+        with tf.name_scope('summary'):
+            tf.summary.scalar('content-loss',self.content_loss)
+            tf.summary.scalar('style-loss',self.style_loss)
+            tf.summary.scalar('tv-loss',self.tv_loss)
+            tf.summary.scalar('all-loss',self.all_loss)
+        self.summary_op = tf.summary.merge_all()
 
-        return loss_affine * weight /self.batch_size
+
+    """
+    Train the neural network
+    """
+    def train(self,batch_size= 10, iterations=1000,save_dir="saved_models",reuse=False,reuse_dir=None,log_dir="log",summary_iter=100,save_iter=1000):
+
+        #create the save directory if not exist
+        if os.path.exists(save_dir):
+            shutil.rmtree(save_dir)
+        if os.path.exists(log_dir):
+            shutil.rmtree(log_dir)
+        os.mkdir(log_dir)
+        #Make new save directory
+        os.mkdir(save_dir)
+        #Operation to initialize all variables
+        init = tf.global_variables_initializer()
+        print("Begin training...")
+        with self.sess as sess:
+            #Initialize all variables
+            sess.run(init)
+            if reuse:
+                self.resume(reuse_dir)
+            #create summary writer for train
+            writer = tf.summary.FileWriter(log_dir,sess.graph)
+
+            #This is our training loop
+            for i in tqdm(range(iterations)):
+                start = time.time()
+                content,style = self.data.get_batch(batch_size)
+
+                # step 1
+                # encode content and style images
+                # input : content / style images
+                # output : the vgg19 encoded version of content / style image
+
+                content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:content})
+                style_batch_encoded,style_target_value = self.sess.run([self.encoder_content_output,self.encoder_style_output]
+                                                                  ,feed_dict={self.images:style})
+
+
+                # step 2
+                # calculate the loss and run the train operation
+                fetches = {
+                    'train': self.train_op,
+                    'global_step': self.global_step,
+                    'summary': self.summary_op,
+                    'lr': self.learning_rate,
+                    'all_loss': self.all_loss,
+                    'content_loss': self.content_loss,
+                    'style_loss': self.style_loss,
+                    'tv_loss': self.tv_loss
+                }
+
+                feed_dict = {
+                    self.content_input:content_batch_encoded,
+                    self.style_input:style_batch_encoded,
+                    self.content_target:content_batch_encoded
+                }
+                for layer in self.style_loss_layers_list:
+                    feed_dict[self.style_target[layer]] = style_target_value[layer]
+
+                result = sess.run(fetches, feed_dict=feed_dict)
+
+                ### Log the summaries
+                if i % summary_iter == 0:
+                    writer.add_summary(result['summary'], result['global_step'])
+
+                ### Save checkpoint
+                if i % save_iter == 0:
+                    self.save(save_dir,result['global_step'])
+
+                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  Time: {:.5f}".format(
+                    result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],time.time() - start))
+                # Last save
+            self.save(save_dir, result['global_step'])
+            writer.close()
