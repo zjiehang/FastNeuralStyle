@@ -33,7 +33,8 @@ def main(_):
 
     network = WCTModel(FLAGS.pretrainedpath,
                        FLAGS.wctoutputproportion,
-                       FLAGS.contentlosslayer)
+                       FLAGS.contentlosslayer,
+                       batch_size=1)
     network.buildPredictModel()
     network.resume(FLAGS.reusedir)
 
