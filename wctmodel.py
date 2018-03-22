@@ -93,6 +93,7 @@ class WCTModel(Model):
         wct_output_layer = WCTLayer([wct_content_input_tl, wct_style_input_tl],
                                         self.wct_output_proportion,
                                         batch_size=self.batch_size,
+                                        shape = self.wct_input_channels,
                                         name='wct-layer')
         wct_output_layer = tl.InstanceNormLayer(wct_output_layer)
 
