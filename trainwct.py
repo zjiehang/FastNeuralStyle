@@ -16,7 +16,7 @@ def main(_):
     network = WCTModel(FLAGS.pretrainedpath,
                        FLAGS.wctoutputproportion,
                        FLAGS.contentlosslayer,
-                       FLAGS.stylelosslayer,
+                       FLAGS.stylelosslayers,
                        FLAGS.contentlossweight,
                        FLAGS.stylelossweight,
                        FLAGS.tvlossweight,
