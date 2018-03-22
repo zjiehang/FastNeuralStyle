@@ -2,7 +2,7 @@ import tensorlayer.layers as tl
 import tensorflow as tf
 
 class WCTLayer(tl.Layer):
-    def __init__(self,layer=[],proportion = 1.0,epsilon=1e-5,eps=1e-8,batch_size=8,name ='wct-layer'):
+    def __init__(self,layer=[],proportion = 1.0,epsilon=1e-5,eps=1e-8,batch_size=8,shape=512,name ='wct-layer'):
         # check layer name (fixed)
         tl.Layer.__init__(self, name=name)
         print("  [TL] WCTLayer %s " %self.name)
@@ -75,7 +75,7 @@ class WCTLayer(tl.Layer):
             blended = proportion * fcs_hat + (1 - proportion) * (fc + mc)
 
             # CxH*W -> CxHxW
-            blended = tf.reshape(blended, (Cc, Hc, Wc))
+            blended = tf.reshape(blended, (shape, Hc, Wc))
             # CxHxW -> 1xHxWxC
             blended = tf.expand_dims(tf.transpose(blended, (1, 2, 0)), 0)
             if self.outputs is None:
