@@ -189,8 +189,9 @@ class WCTModel(Model):
                 # input : content / style images
                 # output : the vgg19 encoded version of content / style image
 
-                content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:content})
-                style_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:style})
+                content_batch_encoded = self.sess.run(self.encoder_content_output, feed_dict={self.images: content})
+                style_batch_encoded, style_target_value = self.sess.run([self.encoder_content_output, self.encoder_style_output]
+                                                                        , feed_dict={self.images: style})
 
                 # step 2
                 # calculate the loss and run the train operation
@@ -200,17 +201,18 @@ class WCTModel(Model):
                     'summary': self.summary_op,
                     'lr': self.learning_rate,
                     'all_loss': self.all_loss,
-                    'feature_loss': self.feature_loss,
-                    'pixel_loss': self.pixel_loss,
+                    'content_loss': self.content_loss,
+                    'style_loss': self.style_loss,
                     'tv_loss': self.tv_loss
                 }
 
                 feed_dict = {
                     self.content_input:content_batch_encoded,
                     self.style_input:style_batch_encoded,
-                    self.content_target:content_batch_encoded,
-                    self.content_image:content
+                    self.content_target:content_batch_encoded
                 }
+                for layer in self.style_loss_layers_list:
+                    feed_dict[self.style_target[layer]] = style_target_value[layer]
 
                 result = sess.run(fetches, feed_dict=feed_dict)
 
@@ -222,8 +224,8 @@ class WCTModel(Model):
                 if i % save_iter == 0:
                     self.save(save_dir,result['global_step'])
 
-                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Pixel: {:.5f}  Feature: {:.5f}  tv: {:.5f}  Time: {:.5f}".format(
-                    result['global_step'], result['lr'], result['all_loss'], result['pixel_loss'],result['feature_loss'],result['tv_loss'],time.time() - start))
+                print("Step: {}  LR: {:.7f}  Loss: {:.5f}  Content: {:.5f}  Style: {:.5f}  tv: {:.5f}  Time: {:.5f}".format(
+                    result['global_step'], result['lr'], result['all_loss'], result['content_loss'],result['style_loss'],result['tv_loss'],time.time() - start))
                 # Last save
             self.save(save_dir, result['global_step'])
             writer.close()
