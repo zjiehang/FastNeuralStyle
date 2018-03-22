@@ -13,21 +13,25 @@ from weights import open_weights
 
 class WCTModel(Model):
     def __init__(self,
-                 pretrained_vgg_path = None,
-                 wct_output_proportion = 1.0,
+                 pretrained_vgg_path=None,
+                 wct_output_proportion=1.0,
                  content_loss_layer='conv5_1',
-                 pixel_loss_weight = 1.0,
-                 feature_loss_weight = 1.0,
-                 tv_loss_weight = 0.0,
-                 batch_size = 10,
-                 learning_rate = 1e-4,
-                 learning_rate_decay = 5e-5):
+                 style_loss_layer='conv1_1;conv2_1;conv3_1;conv4_1',
+                 content_loss_weight=1.0,
+                 style_loss_weight=1.0,
+                 tv_loss_weight=0.0,
+                 use_gram=True,
+                 batch_size=10,
+                 learning_rate=1e-4,
+                 learning_rate_decay=5e-5):
         self.pretrained_vgg_path = pretrained_vgg_path
         self.wct_output_proportion = wct_output_proportion
         self.content_loss_layer = content_loss_layer
-        self.pixel_loss_weight = pixel_loss_weight
-        self.feature_loss_weight = feature_loss_weight
+        self.style_loss_layers_list = style_loss_layer.split(';')
+        self.content_loss_weight = content_loss_weight
+        self.style_loss_weight = style_loss_weight
         self.tv_loss_weight = tv_loss_weight
+        self.use_gram = use_gram
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.learning_rate_decay = learning_rate_decay
@@ -54,6 +58,7 @@ class WCTModel(Model):
             with open_weights(self.pretrained_vgg_path) as weight:
                 vgg19 = NormalizeVgg19(self.images,weight)
             self.encoder_content_output = getattr(vgg19,self.content_loss_layer)
+            self.encoder_style_output = {layer: getattr(vgg19, layer) for layer in self.style_loss_layers_list}
 
         self.calculateLoss()
         self.buildOptimizer()
@@ -95,22 +100,25 @@ class WCTModel(Model):
 
     def calculateLoss(self):
         self.content_target = tf.placeholder(tf.float32,shape=[None,None,None,self.wct_input_channels])
-        self.content_image = tf.placeholder(tf.float32,shape=[None,None,None,3])
+        self.style_target = {
+            layer:tf.placeholder(tf.float32,shape=[None,None,None,utils.get_channel_number_from_vgg19_layer(layer)])
+            for layer in self.style_loss_layers_list
+        }
 
         with tf.name_scope("loss"):
-            with tf.name_scope("feature-loss"):
-                self.feature_loss = tf.squeeze(self.calculate_mse_loss(self.feature_loss_weight,self.encoder_content_output,self.content_target))
-            with tf.name_scope("pixel-loss"):
-                self.pixel_loss = tf.squeeze(self.calculate_mse_loss(self.pixel_loss_weight,self.images,self.content_image))
+            with tf.name_scope("content-loss"):
+                self.content_loss = tf.squeeze(self.calculate_content_loss(self.content_loss_weight,self.encoder_content_output,self.content_target))
+            with tf.name_scope("style-loss"):
+                self.style_loss = tf.squeeze(self.calculate_style_loss(self.style_loss_weight,self.use_gram,self.batch_size,self.encoder_style_output,self.style_target))
             with tf.name_scope("tv-loss"):
                 self.tv_loss = tf.squeeze(self.calculate_tv_loss(self.tv_loss_weight,self.images))
 
-        self.all_loss = self.feature_loss + self.pixel_loss + self.tv_loss
+        self.all_loss = self.content_loss + self.style_loss + self.tv_loss
 
     def summaryMerge(self):
         with tf.name_scope('summary'):
-            tf.summary.scalar('feature-loss',self.feature_loss)
-            tf.summary.scalar('pixel-loss',self.pixel_loss)
+            tf.summary.scalar('content-loss',self.content_loss)
+            tf.summary.scalar('style-loss',self.style_loss)
             tf.summary.scalar('tv-loss',self.tv_loss)
             tf.summary.scalar('all-loss',self.all_loss)
         self.summary_op = tf.summary.merge_all()
@@ -120,6 +128,33 @@ class WCTModel(Model):
 
     def calculate_tv_loss(self,weight,output):
         return tf.multiply(tf.reduce_mean(tf.image.total_variation(output)),weight)
+
+    def calculate_content_loss(self,weight,x,y):
+        return weight * utils.mean_squared(x,y)
+
+    def calculate_style_loss(self,weight,use_gram,batch_size,x,y,epsilon=1e-5):
+        if use_gram is True:
+            gram_losses = []
+            for layer in self.style_loss_layers_list:
+                s_gram = utils.gram_matrix(x[layer])
+                d_gram = utils.gram_matrix(y[layer])
+                gram_loss = utils.mean_squared(d_gram, s_gram)
+                gram_losses.append(gram_loss)
+            style_loss = weight * tf.reduce_sum(gram_losses) / batch_size
+        else:
+            style_loss_list = []
+            for layer in self.style_loss_layers_list:
+                smean, svar = tf.nn.moments(x[layer], [1, 2])
+                dmean, dvar = tf.nn.moments(y[layer], [1, 2])
+
+                m_loss = tf.reduce_sum(tf.squared_difference(smean, dmean)) / batch_size
+                v_loss = tf.reduce_sum(tf.squared_difference(tf.sqrt(svar + epsilon), tf.sqrt(dvar + epsilon))) / batch_size
+
+                style_loss_list.append(m_loss + v_loss)
+
+            style_loss = weight * tf.reduce_sum(style_loss_list)
+        return style_loss
+
 
     """
     Train the neural network

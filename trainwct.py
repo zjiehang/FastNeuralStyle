@@ -16,9 +16,11 @@ def main(_):
     network = WCTModel(FLAGS.pretrainedpath,
                        FLAGS.wctoutputproportion,
                        FLAGS.contentlosslayer,
-                       FLAGS.pixellossweight,
-                       FLAGS.featurelossweight,
+                       FLAGS.stylelosslayer,
+                       FLAGS.contentlossweight,
+                       FLAGS.stylelossweight,
                        FLAGS.tvlossweight,
+                       FLAGS.usegram,
                        FLAGS.batchsize,
                        FLAGS.learningrate,
                        FLAGS.learningratedecay)
@@ -40,9 +42,11 @@ if __name__ == '__main__':
     parser.add_argument("--stylepath",default="images/style",type=str)
     parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
     parser.add_argument("--contentlosslayer",default="conv5_1",type=str)
-    parser.add_argument("--pixellossweight",default=10.0,type=float)
-    parser.add_argument("--featurelossweight",default=1.0,type=float)
+    parser.add_argument("--stylelosslayers", default="conv1_1;conv2_1;conv3_1;conv4_1", type=str)
+    parser.add_argument("--contentlossweight",default=10.0,type=float)
+    parser.add_argument("--stylelossweight",default=1.0,type=float)
     parser.add_argument("--tvlossweight",default=0.0,type=float)
+    parser.add_argument("--usegram",default=True,type=bool)
 
     parser.add_argument("--imgsize",default=256,type=int)
     parser.add_argument("--learningrate",default=1e-4,type=float)
