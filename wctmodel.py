@@ -94,6 +94,7 @@ class WCTModel(Model):
                                         self.wct_output_proportion,
                                         batch_size=self.batch_size,
                                         name='wct-layer')
+        wct_output_layer = tl.InstanceNormLayer(wct_output_layer)
 
         return tf.identity(wct_output_layer.outputs, name='transform-output')
 
