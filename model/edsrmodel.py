@@ -9,6 +9,7 @@ from vgg.vgg19_normalize import NormalizeVgg19
 import os
 from tqdm import tqdm
 import shutil
+import time
 
 class EDSRModel(Model):
     def __init__(self,
