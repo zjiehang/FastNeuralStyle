@@ -1,5 +1,5 @@
 import tensorflow as tf
-import utils
+from utils import utils
 class NormalizeVgg19(object):
 
     # Input should be an rgb image [batch, height, width, 3]
