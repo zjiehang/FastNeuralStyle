@@ -124,6 +124,9 @@ class EDSRModel(Model):
         x = tl.Conv2d(x, 3, [3, 3], act=tf.nn.relu, name='final-output')
         self.output = x.outputs
 
+        self.sess = tf.Session()
+        self.saver = tf.train.Saver(tf.trainable_variables())
+
 
     def __resBlock(self, x, channels = 64, kernel_size = [3, 3], scale = 1,layer = 0):
         nn = tl.Conv2d(x, channels, kernel_size, act=tf.nn.relu, name='res%d/c1'%(layer))
