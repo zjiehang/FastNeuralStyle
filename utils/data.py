@@ -1,7 +1,7 @@
 # coding : utf-8
 import os
 import numpy as np
-import utils
+from utils import utils
 import scipy.misc
 import tensorlayer as tl
 
