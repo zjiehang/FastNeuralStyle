@@ -195,13 +195,7 @@ class EDSRModel(Model):
                 # input : content / style images
                 # output : the vgg19 encoded version of content / style image
 
-                content_batch_encoded = self.sess.run(self.encoder_content_output, feed_dict={self.images: content})
-                style_batch_encoded, style_target_value = self.sess.run(
-                    [self.encoder_content_output, self.encoder_style_output]
-                    , feed_dict={self.images: style})
 
-                # step 2
-                # calculate the loss and run the train operation
                 fetches = {
                     'train': self.train_op,
                     'global_step': self.global_step,
@@ -214,12 +208,9 @@ class EDSRModel(Model):
                 }
 
                 feed_dict = {
-                    self.content_input: content_batch_encoded,
-                    self.style_input: style_batch_encoded,
-                    self.content_target: content_batch_encoded
+                    self.content_input:content,
+                    self.style_input: style
                 }
-                for layer in self.style_loss_layers_list:
-                    feed_dict[self.style_target[layer]] = style_target_value[layer]
 
                 result = sess.run(fetches, feed_dict=feed_dict)
 
