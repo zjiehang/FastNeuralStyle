@@ -8,8 +8,8 @@ import numpy as np
 import argparse
 import os
 import time
-from adainmodel import AdaInModel
-from coral import coral_numpy
+from model.adainmodel import AdaInModel
+from utils.coral import coral_numpy
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None

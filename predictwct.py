@@ -8,8 +8,8 @@ import numpy as np
 import argparse
 import os
 import time
-from wctmodel import WCTModel
-from coral import coral_numpy
+from model.wctmodel import WCTModel
+from utils.coral import coral_numpy
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None

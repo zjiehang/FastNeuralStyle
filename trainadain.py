@@ -5,8 +5,8 @@ import sys
 import tensorflow as tf
 import argparse
 import os
-from data import Data
-from adainmodel import AdaInModel
+from utils.data import Data
+from model.adainmodel import AdaInModel
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None

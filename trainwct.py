@@ -5,8 +5,8 @@ import sys
 import tensorflow as tf
 import argparse
 import os
-from data import Data
-from wctmodel import WCTModel
+from utils.data import Data
+from model.wctmodel import WCTModel
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 FLAGS = None

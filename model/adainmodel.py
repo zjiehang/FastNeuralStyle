@@ -2,30 +2,30 @@ import tensorflow as tf
 import tensorlayer.layers as tl
 from vgg.vgg19_normalize import NormalizeVgg19
 from model import Model
-from layer.WCTLayer import WCTLayer
+from layer.AdaINLayer import AdaINLayer
+import shutil
 import os
 import utils
-import shutil
-from tqdm import tqdm
 import time
-from weights import open_weights
+from tqdm import tqdm
+from utils.weights import open_weights
 
 
-class WCTModel(Model):
+class AdaInModel(Model):
     def __init__(self,
-                 pretrained_vgg_path=None,
-                 wct_output_proportion=1.0,
-                 content_loss_layer='conv5_1',
+                 pretrained_vgg_path = None,
+                 adain_output_proportion = 1.0,
+                 content_loss_layer='conv4_1',
                  style_loss_layer='conv1_1;conv2_1;conv3_1;conv4_1',
-                 content_loss_weight=1.0,
-                 style_loss_weight=1.0,
-                 tv_loss_weight=0.0,
-                 use_gram=True,
-                 batch_size=10,
-                 learning_rate=1e-4,
-                 learning_rate_decay=5e-5):
+                 content_loss_weight = 1.0,
+                 style_loss_weight = 1.0,
+                 tv_loss_weight = 0.0,
+                 use_gram = False,
+                 batch_size = 10,
+                 learning_rate = 1e-4,
+                 learning_rate_decay = 5e-5):
         self.pretrained_vgg_path = pretrained_vgg_path
-        self.wct_output_proportion = wct_output_proportion
+        self.adain_output_proportion = adain_output_proportion
         self.content_loss_layer = content_loss_layer
         self.style_loss_layers_list = style_loss_layer.split(';')
         self.content_loss_weight = content_loss_weight
@@ -37,28 +37,28 @@ class WCTModel(Model):
         self.learning_rate_decay = learning_rate_decay
 
         self.encoder_input_channels = 3
-        self.wct_input_channels = utils.get_channel_number_from_vgg19_layer(self.content_loss_layer)
+        self.adain_input_channels = utils.get_channel_number_from_vgg19_layer(self.content_loss_layer)
 
         assert os.path.exists(self.pretrained_vgg_path), 'The pretrained vgg file must exist!'
 
 
     def buildTrainModel(self):
-        # input for wct-lyaer
-        self.content_input = tf.placeholder(tf.float32,[None,None,None,self.wct_input_channels],name='content-input')
-        self.style_input = tf.placeholder(tf.float32,[None,None,None,self.wct_input_channels],name='style-input')
+        # input for adain-lyaer
+        self.content_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='content-input')
+        self.style_input = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='style-input')
 
 
-        with tf.variable_scope('WCT-layer'):
-            self.transform_output = self.buildWCTLayer(self.content_input,self.style_input)
+        with tf.variable_scope('AdaIn-layer'):
+            self.transform_output = self.buildAdainLayer(self.content_input,self.style_input)
 
         with tf.variable_scope('decoder'):
-            self.images = self.buildDecoder(self.transform_output,self.wct_input_channels)
+            self.images = self.buildDecoder(self.transform_output,self.adain_input_channels)
 
         with tf.variable_scope('encoder'):
             with open_weights(self.pretrained_vgg_path) as weight:
                 vgg19 = NormalizeVgg19(self.images,weight)
             self.encoder_content_output = getattr(vgg19,self.content_loss_layer)
-            self.encoder_style_output = {layer: getattr(vgg19, layer) for layer in self.style_loss_layers_list}
+            self.encoder_style_output = {layer:getattr(vgg19,layer) for layer in self.style_loss_layers_list}
 
         self.calculateLoss()
         self.buildOptimizer()
@@ -69,39 +69,36 @@ class WCTModel(Model):
 
     def buildPredictModel(self):
         self.image = tf.placeholder(tf.float32,[None,None,None,3],name='image')
-        self.content = tf.placeholder(tf.float32,[None,None,None,self.wct_input_channels],name='content')
-        self.style = tf.placeholder(tf.float32,[None,None,None,self.wct_input_channels],name='style')
+        self.content = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='content')
+        self.style = tf.placeholder(tf.float32,[None,None,None,self.adain_input_channels],name='style')
 
         with tf.variable_scope('encoder'):
             with open_weights(self.pretrained_vgg_path) as weight:
                 vgg19 = NormalizeVgg19(self.image,weight)
             self.encoder_output = getattr(vgg19,self.content_loss_layer)
 
-        with tf.variable_scope('WCT-layer'):
-            self.transform_output = self.buildWCTLayer(self.content,self.style)
+        with tf.variable_scope('adain-layer'):
+            self.transform_output = self.buildAdainLayer(self.content,self.style)
 
         with tf.variable_scope('decoder'):
-            self.decoder_output = self.buildDecoder(self.transform_output,self.wct_input_channels)
+            self.decoder_output = self.buildDecoder(self.transform_output,self.adain_input_channels)
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver(tf.trainable_variables())
         self.sess.run(tf.global_variables_initializer())
 
-    def buildWCTLayer(self,content,style):
-        wct_content_input_tl = tl.InputLayer(content, name='wct-content-input-tl')
-        wct_style_input_tl = tl.InputLayer(style, name='wct-style-input-tl')
-        wct_output_layer = WCTLayer([wct_content_input_tl, wct_style_input_tl],
-                                        self.wct_output_proportion,
-                                        batch_size=self.batch_size,
-                                        shape = self.wct_input_channels,
-                                        name='wct-layer')
-        wct_output_layer = tl.InstanceNormLayer(wct_output_layer)
 
-        return tf.identity(wct_output_layer.outputs, name='transform-output')
+    def buildAdainLayer(self,content,style):
+        adain_content_input_tl = tl.InputLayer(content, name='adain-content-input-tl')
+        adain_style_input_tl = tl.InputLayer(style, name='adain-style-input-tl')
+        adain_output_layer = AdaINLayer([adain_content_input_tl, adain_style_input_tl],
+                                        self.adain_output_proportion,
+                                        name='adain-layer')
 
+        return tf.identity(adain_output_layer.outputs, name='transform-output')
 
     def calculateLoss(self):
-        self.content_target = tf.placeholder(tf.float32,shape=[None,None,None,self.wct_input_channels])
+        self.content_target = tf.placeholder(tf.float32,shape=[None,None,None,self.adain_input_channels])
         self.style_target = {
             layer:tf.placeholder(tf.float32,shape=[None,None,None,utils.get_channel_number_from_vgg19_layer(layer)])
             for layer in self.style_loss_layers_list
@@ -117,19 +114,6 @@ class WCTModel(Model):
 
         self.all_loss = self.content_loss + self.style_loss + self.tv_loss
 
-    def summaryMerge(self):
-        with tf.name_scope('summary'):
-            tf.summary.scalar('content-loss',self.content_loss)
-            tf.summary.scalar('style-loss',self.style_loss)
-            tf.summary.scalar('tv-loss',self.tv_loss)
-            tf.summary.scalar('all-loss',self.all_loss)
-        self.summary_op = tf.summary.merge_all()
-
-    def calculate_mse_loss(self,weight,output,target):
-        return weight*utils.mean_squared(output,target)
-
-    def calculate_tv_loss(self,weight,output):
-        return tf.multiply(tf.reduce_mean(tf.image.total_variation(output)),weight)
 
     def calculate_content_loss(self,weight,x,y):
         return weight * utils.mean_squared(x,y)
@@ -158,10 +142,24 @@ class WCTModel(Model):
         return style_loss
 
 
+    def calculate_tv_loss(self,weight,output):
+        return tf.multiply(tf.reduce_mean(tf.image.total_variation(output)),weight)
+
+
+    def summaryMerge(self):
+        with tf.name_scope('summary'):
+            tf.summary.scalar('content-loss',self.content_loss)
+            tf.summary.scalar('style-loss',self.style_loss)
+            tf.summary.scalar('tv-loss',self.tv_loss)
+            tf.summary.scalar('all-loss',self.all_loss)
+        self.summary_op = tf.summary.merge_all()
+
+
     """
     Train the neural network
     """
     def train(self,batch_size= 10, iterations=1000,save_dir="saved_models",reuse=False,reuse_dir=None,log_dir="log",summary_iter=100,save_iter=1000):
+
         #create the save directory if not exist
         if os.path.exists(save_dir):
             shutil.rmtree(save_dir)
@@ -191,9 +189,10 @@ class WCTModel(Model):
                 # input : content / style images
                 # output : the vgg19 encoded version of content / style image
 
-                content_batch_encoded = self.sess.run(self.encoder_content_output, feed_dict={self.images: content})
-                style_batch_encoded, style_target_value = self.sess.run([self.encoder_content_output, self.encoder_style_output]
-                                                                        , feed_dict={self.images: style})
+                content_batch_encoded = self.sess.run(self.encoder_content_output,feed_dict={self.images:content})
+                style_batch_encoded,style_target_value = self.sess.run([self.encoder_content_output,self.encoder_style_output]
+                                                                  ,feed_dict={self.images:style})
+
 
                 # step 2
                 # calculate the loss and run the train operation
