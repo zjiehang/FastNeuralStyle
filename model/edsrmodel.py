@@ -76,7 +76,7 @@ class EDSRModel(Model):
             x = tl.ElementwiseLayer([conv_1,x],tf.add, name='res_output_add')
 
         x = tl.Conv2d(x,3,[3,3],act=tf.nn.relu,name='final-output')
-        self.output = x.outputs
+        self.output = tf.identity(x.outputs,name='output')
 
         self.calculateLoss()
         self.buildOptimizer()
@@ -86,7 +86,43 @@ class EDSRModel(Model):
         self.saver = tf.train.Saver(tf.trainable_variables())
 
     def buildPredictModel(self):
-        pass
+        scaling_factor = 0.1
+
+        self.image = tf.placeholder(shape=[None, None, None, 3], dtype=tf.float32, name='image')
+        input = tl.InputLayer(self.image,name='input')
+
+        with tf.variable_scope("encoder"):
+            x = tl.Conv2d(input, self.edsr_feature_size, [3, 3], name='input')
+            conv_1 = x
+            for i in range(self.edsr_layer):
+                x = self.__resBlock(x, self.edsr_feature_size, scale=scaling_factor, layer=i)
+            x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='output')
+            x = tl.ElementwiseLayer([conv_1, x], tf.add, name='res_output_add')
+
+        self.encoder_output = tf.identity(x.outputs,name='encoder-output')
+
+        self.adain_content_input = tf.placeholder(shape=[None, None, None, self.edsr_feature_size], dtype=tf.float32, name='adain-content-input')
+        self.adain_style_input = tf.placeholder(shape=[None, None, None, self.edsr_feature_size], dtype=tf.float32, name='adain-style-input')
+
+        with tf.variable_scope("adain-layer"):
+            x = tf.split(x.outputs, axis=0, num_or_size_splits=2)
+            adain_content_input_tl = tl.InputLayer(self.adain_content_input, name='adain-content-input-tl')
+            adain_style_input_tl = tl.InputLayer(self.adain_style_input, name='adain-style-input-tl')
+            x = AdaINLayer([adain_content_input_tl, adain_style_input_tl],
+                           self.adain_output_proportion,
+                           name='adain-layer'
+                           )
+
+        with tf.variable_scope("decoder"):
+            x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], name='input')
+            conv_1 = x
+            for i in range(self.edsr_layer):
+                x = self.__resBlock(x, self.edsr_feature_size, scale=scaling_factor, layer=i)
+            x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='output')
+            x = tl.ElementwiseLayer([conv_1, x], tf.add, name='res_output_add')
+
+        x = tl.Conv2d(x, 3, [3, 3], act=tf.nn.relu, name='final-output')
+        self.output = x.outputs
 
 
     def __resBlock(self, x, channels = 64, kernel_size = [3, 3], scale = 1,layer = 0):
@@ -229,3 +265,14 @@ class EDSRModel(Model):
                 # Last save
             self.save(save_dir, result['global_step'])
             writer.close()
+
+    """
+    Estimate the trained model
+    x: (tf.float32, [batch_size, h, w, output_channels])
+    """
+    def predict(self, content,style):
+        content_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:content})
+        style_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:style})
+
+        return self.sess.run(self.output,feed_dict={self.adain_content_input:content_encoded,
+                                                    self.adain_style_input:style_encoded})
