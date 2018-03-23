@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorlayer.layers as tl
 from vgg.vgg19_normalize import NormalizeVgg19
-from model import Model
+from model.model import Model
 from layer.WCTLayer import WCTLayer
 import os
 import utils

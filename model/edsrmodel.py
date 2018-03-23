@@ -6,6 +6,7 @@ from layer.AdaINLayer import AdaINLayer
 from utils import utils
 from utils.weights import open_weights
 from vgg.vgg19_normalize import NormalizeVgg19
+import os
 
 class EDSRModel(Model):
     def __init__(self,
