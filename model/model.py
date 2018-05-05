@@ -2,7 +2,7 @@ import tensorflow as tf
 from tqdm import tqdm
 from abc import ABCMeta,abstractmethod
 import os
-import utils
+from utils import utils
 import tensorlayer.layers as tl
 from layer.UnpoolLayer import UnpoolLayer
 

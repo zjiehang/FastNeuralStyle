@@ -58,6 +58,9 @@ class EDSRModel(Model):
             x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act = None, name = 'output')
             x = tl.ElementwiseLayer([conv_1,x],tf.add, name='res_output_add')
 
+            #for i in range(4):
+            #    x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='add-conv%d'%(i))
+
         with tf.variable_scope("adain-layer"):
             x = tf.split(x.outputs,axis=0,num_or_size_splits=2)
             adain_content_input = tl.InputLayer(x[0],name='adain-content-input')
@@ -75,6 +78,9 @@ class EDSRModel(Model):
             x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act = None, name = 'output')
             x = tl.ElementwiseLayer([conv_1,x],tf.add, name='res_output_add')
 
+            #for i in range(4):
+            #    x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='add-conv%d'%(i))
+
         x = tl.Conv2d(x,3,[3,3],act=tf.nn.relu,name='final-output')
         self.output = tf.identity(x.outputs,name='output')
 
@@ -89,6 +95,54 @@ class EDSRModel(Model):
         scaling_factor = 0.1
 
         self.image = tf.placeholder(shape=[None, None, None, 3], dtype=tf.float32, name='image')
+        #self.image_norm = tf.div(self.image,tf.constant(255.0,tf.float32))
+        input = tl.InputLayer(self.image,name='input')
+
+        with tf.variable_scope("encoder"):
+            x = tl.Conv2d(input, self.edsr_feature_size, [3, 3], name='input')
+            conv_1 = x
+            for i in range(self.edsr_layer):
+                x = self.__resBlock(x, self.edsr_feature_size, scale=scaling_factor, layer=i)
+            x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='output')
+            x = tl.ElementwiseLayer([conv_1, x], tf.add, name='res_output_add')
+
+            #for i in range(4):
+            #    x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='add-conv%d'%(i))
+        self.encoder_output = tf.identity(x.outputs,name='encoder-output')
+
+        self.adain_content_input = tf.placeholder(shape=[None, None, None, self.edsr_feature_size], dtype=tf.float32, name='adain-content-input')
+        self.adain_style_input = tf.placeholder(shape=[None, None, None, self.edsr_feature_size], dtype=tf.float32, name='adain-style-input')
+
+        with tf.variable_scope("adain-layer"):
+            adain_content_input_tl = tl.InputLayer(self.adain_content_input, name='adain-content-input-tl')
+            adain_style_input_tl = tl.InputLayer(self.adain_style_input, name='adain-style-input-tl')
+            x = AdaINLayer([adain_content_input_tl, adain_style_input_tl],
+                           self.adain_output_proportion,
+                           name='adain-layer'
+                           )
+
+        with tf.variable_scope("decoder"):
+            x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], name='input')
+            conv_1 = x
+            for i in range(self.edsr_layer):
+                x = self.__resBlock(x, self.edsr_feature_size, scale=scaling_factor, layer=i)
+            x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='output')
+            x = tl.ElementwiseLayer([conv_1, x], tf.add, name='res_output_add')
+
+            #for i in range(4):
+            #    x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], act=None, name='add-conv%d'%(i))
+
+        x = tl.Conv2d(x, 3, [3, 3], act=tf.nn.relu, name='final-output')
+        self.output = tf.identity(x.outputs,name='output')
+
+        self.sess = tf.Session()
+        self.saver = tf.train.Saver(tf.trainable_variables())
+
+    def buildMultiStylePredictModel(self):
+        scaling_factor = 0.1
+
+        self.image = tf.placeholder(shape=[None, None, None, 3], dtype=tf.float32, name='image')
+        #self.image_norm = tf.div(self.image,tf.constant(255.0,tf.float32))
         input = tl.InputLayer(self.image,name='input')
 
         with tf.variable_scope("encoder"):
@@ -111,8 +165,10 @@ class EDSRModel(Model):
             x = AdaINLayer([adain_content_input_tl, adain_style_input_tl],
                            self.adain_output_proportion,
                            name='adain-layer'
-                           )
-
+                          )
+        self.adain_output = tf.identity(x.outputs,name='adain-output')
+        self.decoder_input = tf.placeholder(shape=[None,None,None,self.edsr_feature_size],dtype=tf.float32,name='decoder-input')
+        x = tl.InputLayer(self.decoder_input,name='decoder-input')
         with tf.variable_scope("decoder"):
             x = tl.Conv2d(x, self.edsr_feature_size, [3, 3], name='input')
             conv_1 = x
@@ -122,7 +178,7 @@ class EDSRModel(Model):
             x = tl.ElementwiseLayer([conv_1, x], tf.add, name='res_output_add')
 
         x = tl.Conv2d(x, 3, [3, 3], act=tf.nn.relu, name='final-output')
-        self.output = x.outputs
+        self.output = tf.identity(x.outputs,name='output')
 
         self.sess = tf.Session()
         self.saver = tf.train.Saver(tf.trainable_variables())
@@ -137,20 +193,23 @@ class EDSRModel(Model):
 
 
     def calculateLoss(self):
-        vgg_input = tf.concat([self.style_input,self.output],axis=0)
+        vgg_input = tf.concat([self.content_input,self.style_input,self.output],axis=0)
         with tf.variable_scope('vgg19'):
             with open_weights(self.pretrained_vgg_path) as weight:
                 vgg19 = NormalizeVgg19(vgg_input,weight)
+                content_vgg19_list = tf.split(getattr(vgg19,self.content_loss_layer),axis=0,num_or_size_splits=3) 
+                content_target = content_vgg19_list[0]
+                content_output = content_vgg19_list[2]             
                 style_target = {}
                 style_output = {}
                 for layer in self.style_loss_layers_list:
-                    style_vgg19_list = tf.split(getattr(vgg19,layer),axis=0,num_or_size_splits=2)
-                    style_target[layer] = style_vgg19_list[0]
-                    style_output[layer] = style_vgg19_list[1]
+                    style_vgg19_list = tf.split(getattr(vgg19,layer),axis=0,num_or_size_splits=3)
+                    style_target[layer] = style_vgg19_list[1]
+                    style_output[layer] = style_vgg19_list[2]
 
         with tf.name_scope("loss"):
             with tf.name_scope("content-loss"):
-                self.content_loss = tf.squeeze(self.calculate_content_loss(self.content_loss_weight,self.content_input,self.output))
+                self.content_loss = tf.squeeze(self.calculate_content_loss(self.content_loss_weight,content_target,content_output))
             with tf.name_scope("style-loss"):
                 self.style_loss = tf.squeeze(self.calculate_style_loss(self.style_loss_weight,self.use_gram,self.batch_size,style_target,style_output))
             with tf.name_scope("tv-loss"):
@@ -203,7 +262,7 @@ class EDSRModel(Model):
     """
 
     def train(self, batch_size=10, iterations=1000, save_dir="saved_models", reuse=False, reuse_dir=None,
-              log_dir="log", summary_iter=100, save_iter=1000):
+              log_dir="log", summary_iter=100, save_iter=1000,save_model_bool=False,save_model_dir="tmp/model"):
 
         # create the save directory if not exist
         if os.path.exists(save_dir):
@@ -266,9 +325,17 @@ class EDSRModel(Model):
                         result['global_step'], result['lr'], result['all_loss'], result['content_loss'],
                         result['style_loss'], result['tv_loss'], time.time() - start))
                 # Last save
-            self.save(save_dir, result['global_step'])
+            if not save_model_bool:
+                self.save(save_dir, result['global_step'])
             writer.close()
-
+         
+            if save_model_bool:
+                builder = tf.saved_model.builder.SavedModelBuilder(save_model_dir)
+                builder.add_meta_graph_and_variables(
+					sess,
+					[tf.saved_model.tag_constants.SERVING]				
+				)
+                builder.save()
     """
     Estimate the trained model
     x: (tf.float32, [batch_size, h, w, output_channels])
@@ -279,3 +346,20 @@ class EDSRModel(Model):
 
         return self.sess.run(self.output,feed_dict={self.adain_content_input:content_encoded,
                                                     self.adain_style_input:style_encoded})
+
+
+    def predictMultiStyle(self, content,styles,weight):
+        content_encoded = self.sess.run(self.encoder_output,feed_dict={self.image:content})
+        styles_encoded = []
+        for style in styles:
+            styles_encoded.append(self.sess.run(self.encoder_output,feed_dict={self.image:[style]})[0])
+
+        content_styles_adain = []
+        for style_encoded in styles_encoded:
+            content_styles_adain.append(self.sess.run(self.adain_output,feed_dict={self.adain_content_input:content_encoded,
+                                                    self.adain_style_input:[style_encoded]})[0])
+        decoder_input = content_styles_adain[0] * weight[0]
+        for i in range(1,len(content_styles_adain)):
+            decoder_input += content_styles_adain[i] * weight[i]
+
+        return self.sess.run(self.output,feed_dict={self.decoder_input:[decoder_input]})

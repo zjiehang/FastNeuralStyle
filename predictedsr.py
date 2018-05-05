@@ -68,16 +68,16 @@ def main(_):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--edsrlayer",default=16,type=int)
+    parser.add_argument("--edsrlayer",default=8,type=int)
     parser.add_argument("--edsrfeaturesize", default=128, type=int)
 
-    parser.add_argument("--contentpath",default="input/content",type=str)
-    parser.add_argument("--stylepath",default="input/style",type=str)
+    parser.add_argument("--contentpath",default="/home/lkh/桌面/FastNeuralStyle/input/content/brad_pitt.jpg",type=str)
+    parser.add_argument("--stylepath",default="/home/lkh/桌面/FastNeuralStyle/input/style/la_muse.jpg",type=str)
     parser.add_argument("--pretrainedpath",default="pretrained/vgg19_weights_normalized.h5",type=str)
-    parser.add_argument("--preservecolor",default=True,type=bool)
+    parser.add_argument("--preservecolor",default=False,type=bool)
     #parser.add_argument("--stylelosslayers",default="conv1_1;conv2_1;conv3_1;conv4_1",type=str)
     parser.add_argument("--adainoutputproportion",default=1.0,type=float)
-    parser.add_argument("--outdir",default='outfile/edsr_10000',type=str)
-    parser.add_argument("--reusedir", default='ckpt/edsr_10000', type=str)
+    parser.add_argument("--outdir",default='/home/lkh/桌面/outfile/edsr_content1_style1e-3',type=str)
+    parser.add_argument("--reusedir", default='ckpt/edsr_content1_style1e-3_10000', type=str)
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

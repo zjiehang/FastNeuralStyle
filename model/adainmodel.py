@@ -5,10 +5,10 @@ from model.model import Model
 from layer.AdaINLayer import AdaINLayer
 import shutil
 import os
-import utils
 import time
 from tqdm import tqdm
 from utils.weights import open_weights
+from utils import utils
 
 
 class AdaInModel(Model):
